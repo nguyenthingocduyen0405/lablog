@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import DailyPostCard from "../../components/daily-post-card";
+import NotificationsBell from "../../components/notifications-bell";
 import { getCurrentUser, logoutAccount, type AuthUser } from "../../lib/auth";
 import {
   loadDailyPosts,
@@ -63,7 +64,10 @@ export default function MemberProfilePage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-8">
           <Link href="/" className="flex items-center gap-2 text-sm font-black transition hover:-translate-x-1">{"\u2190 \uB7A9 \uD53C\uB4DC"}</Link>
           <Link href="/" className="text-lg font-black tracking-[-0.04em]">LABLOG</Link>
-          <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="w-16 text-right text-xs font-bold text-stone-400 hover:text-stone-900">{"\uB85C\uADF8\uC544\uC6C3"}</button>
+          <div className="flex items-center gap-2">
+            <NotificationsBell userId={currentUser.id} />
+            <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="hidden text-right text-xs font-bold text-stone-400 hover:text-stone-900 sm:block">{"\uB85C\uADF8\uC544\uC6C3"}</button>
+          </div>
         </div>
       </header>
 
@@ -94,7 +98,7 @@ export default function MemberProfilePage() {
 
           {memberPosts.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {memberPosts.map((post) => <DailyPostCard key={post.id} post={post} member={member} />)}
+              {memberPosts.map((post) => <DailyPostCard key={post.id} post={post} member={member} currentUserId={currentUser.id} members={members} />)}
             </div>
           ) : (
             <div className="rounded-[2rem] border-2 border-dashed border-stone-300 bg-white/45 px-6 py-16 text-center">

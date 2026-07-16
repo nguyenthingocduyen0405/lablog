@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import DailyPostCard from "./components/daily-post-card";
+import NotificationsBell from "./components/notifications-bell";
 import { getCurrentUser, logoutAccount, type AuthUser } from "./lib/auth";
 import {
   createDailyPost,
@@ -88,6 +89,7 @@ export default function Home() {
             </div>
           </Link>
           <div className="flex items-center gap-2">
+            <NotificationsBell userId={currentMember.id} />
             <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="hidden rounded-full px-3 py-2 text-xs font-bold text-stone-400 transition hover:bg-white hover:text-stone-900 sm:block">{"\uB85C\uADF8\uC544\uC6C3"}</button>
             <Link href={`/members/${currentMember.id}`} className="flex items-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-4 shadow-sm ring-1 ring-black/[0.06] transition hover:-translate-y-0.5 hover:shadow-md">
               <span className="flex h-9 w-9 items-center justify-center rounded-full text-xs font-black" style={{ background: currentMember.avatarBackground }}>{currentMember.initials}</span>
@@ -180,7 +182,7 @@ export default function Home() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {allPosts.map((post) => {
               const member = members.find((item) => item.id === post.memberId);
-              return member ? <DailyPostCard key={post.id} post={post} member={member} /> : null;
+              return member ? <DailyPostCard key={post.id} post={post} member={member} currentUserId={currentMember.id} members={members} /> : null;
             })}
           </div>
         </section>
