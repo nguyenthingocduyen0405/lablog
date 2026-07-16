@@ -110,7 +110,7 @@ export default function Home() {
 
         <section id="new-post" className="mb-12 scroll-mt-28 overflow-hidden rounded-[2.25rem] bg-[#181611] p-4 text-white shadow-[0_24px_80px_rgba(40,32,14,0.18)] sm:p-6">
           <form onSubmit={handlePostSubmit} className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr] lg:items-center">
-            <label className="group relative block aspect-[4/3] cursor-pointer overflow-hidden rounded-[1.75rem] border-2 border-dashed border-white/20 bg-white/[0.06] transition hover:border-[#ffd84d]/70" style={previewUrl ? { backgroundImage: `url("${previewUrl}")`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>
+            <label className="group relative block aspect-[4/3] cursor-pointer overflow-hidden rounded-[1.75rem] border-2 border-dashed border-white/20 bg-white/[0.06] transition hover:border-[#ffd84d]/70" style={previewUrl ? { backgroundImage: `url("${previewUrl}")`, backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat", backgroundColor: "#0c0a09" } : undefined}>
               {!previewUrl && (
                 <span className="absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#ffd84d] text-3xl text-stone-950 transition group-hover:scale-110">{"\u{1F4F7}"}</span>
