@@ -96,8 +96,9 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
     supabase.from("post_reactions").select("post_id,user_id,emoji").in("post_id", postIds),
     supabase.from("post_comments").select("id,post_id,user_id,body,created_at").in("post_id", postIds).order("created_at"),
   ]);
-  if (reactionError) throw reactionError;
-  if (commentError) throw commentError;
+  const isMissingTable = (code?: string) => code === "PGRST205" || code === "42P01";
+  if (reactionError && !isMissingTable(reactionError.code)) throw reactionError;
+  if (commentError && !isMissingTable(commentError.code)) throw commentError;
   return posts.map((post) => {
     const { data: publicImage } = supabase.storage.from("post-images").getPublicUrl(post.image_path);
     return {
