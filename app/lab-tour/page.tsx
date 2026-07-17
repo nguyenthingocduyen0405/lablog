@@ -9,16 +9,16 @@ import { DEFAULT_AVATAR_CONFIG, loadLabMembers, type LabMember } from "../lib/la
 type TourStage = "overview" | "introductions" | "game" | "complete";
 
 const seats = [
-  { x: 17, y: 30 }, { x: 39, y: 24 }, { x: 61, y: 24 }, { x: 83, y: 30 },
-  { x: 17, y: 69 }, { x: 39, y: 75 }, { x: 61, y: 75 }, { x: 83, y: 69 },
+  { x: 27, y: 34 }, { x: 42, y: 34 }, { x: 57, y: 34 }, { x: 72, y: 34 },
+  { x: 27, y: 68 }, { x: 42, y: 68 }, { x: 57, y: 68 }, { x: 72, y: 68 },
 ];
 
 const labObjects = [
-  { id: "printer", label: "프린터", emoji: "🖨️", x: 9, y: 48, hint: "출입문 가까이에 있어요." },
-  { id: "extinguisher", label: "소화기", emoji: "🧯", x: 91, y: 47, hint: "오른쪽 벽을 살펴보세요." },
-  { id: "fridge", label: "냉장고", emoji: "🧊", x: 85, y: 13, hint: "방의 오른쪽 위에 있어요." },
-  { id: "coffee", label: "커피 머신", emoji: "☕", x: 14, y: 14, hint: "창가 쪽 작은 테이블을 찾아보세요." },
-  { id: "meeting", label: "회의 테이블", emoji: "🗂️", x: 50, y: 49, hint: "방 한가운데를 확인해 보세요." },
+  { id: "fridge", label: "냉장고", emoji: "🧊", x: 8, y: 36, hint: "책장 옆 왼쪽 벽을 살펴보세요." },
+  { id: "microwave", label: "전자레인지", emoji: "📻", x: 91, y: 35, hint: "싱크대가 있는 오른쪽 조리대 위에 있어요." },
+  { id: "printer", label: "프린터", emoji: "🖨️", x: 87, y: 72, hint: "방 뒤쪽 작업 테이블을 찾아보세요." },
+  { id: "extinguisher", label: "소화기", emoji: "🧯", x: 78, y: 80, hint: "프린터 가까운 바닥 쪽에 있어요." },
+  { id: "whiteboard", label: "화이트보드", emoji: "📝", x: 13, y: 72, hint: "검은 책장 옆에 세워져 있어요." },
 ] as const;
 
 export default function LabTourPage() {
@@ -100,20 +100,28 @@ export default function LabTourPage() {
       </header>
 
       <section className="relative z-10 mx-auto flex min-h-[calc(100vh-72px)] max-w-7xl items-center justify-center px-3 pb-32 sm:px-8 sm:pb-28">
-        <div className="relative h-[60vh] min-h-[31rem] w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#293126] shadow-[0_35px_120px_rgba(0,0,0,.55)] sm:h-[70vh]">
-          <div className="absolute inset-x-0 top-0 h-[22%] bg-[linear-gradient(180deg,#343e31,#273024)]">
-            <div className="absolute left-[24%] top-[18%] h-[48%] w-[52%] rounded-xl bg-[#b8d7dc]/25 ring-4 ring-[#181d17] shadow-[inset_0_0_30px_rgba(190,230,235,.16)]"><span className="absolute inset-x-0 bottom-2 text-center text-[9px] font-black tracking-[.3em] text-white/20">OS LAB</span></div>
+        <div className="relative h-[60vh] min-h-[31rem] w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#d7d9d5] shadow-[0_35px_120px_rgba(0,0,0,.55)] sm:h-[70vh]">
+          <div className="absolute inset-x-0 top-0 h-[22%] bg-[linear-gradient(180deg,#f1f2ef,#d9ddd9)]">
+            <div className="absolute left-[25%] top-[10%] h-[67%] w-[52%] overflow-hidden rounded-sm bg-[#b9d5d5] ring-4 ring-[#545c58] shadow-[inset_0_0_30px_rgba(90,130,130,.18)]">
+              <span className="absolute bottom-0 left-1/3 top-0 w-1 bg-[#545c58]" /><span className="absolute bottom-0 right-1/3 top-0 w-1 bg-[#545c58]" />
+              <span className="absolute inset-x-0 top-0 h-[45%] bg-white/65" /><span className="absolute bottom-2 right-4 text-[8px] font-black tracking-[.25em] text-[#45605c]/40">OS LAB VIEW</span>
+            </div>
           </div>
-          <div className="absolute inset-x-0 bottom-0 h-[80%] origin-bottom bg-[#c9b88d]" style={{ clipPath: "polygon(8% 0,92% 0,100% 100%,0 100%)", backgroundImage: "linear-gradient(rgba(70,55,28,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(70,55,28,.10) 1px,transparent 1px)", backgroundSize: "44px 44px" }} />
-          <div className="absolute bottom-0 left-0 top-[18%] w-[9%] bg-[linear-gradient(90deg,#1c221b,#394235)]" />
-          <div className="absolute bottom-0 right-0 top-[18%] w-[9%] bg-[linear-gradient(270deg,#1c221b,#394235)]" />
+          <div className="absolute inset-x-0 bottom-0 h-[80%] origin-bottom bg-[#aaa8a1]" style={{ clipPath: "polygon(8% 0,92% 0,100% 100%,0 100%)", backgroundImage: "linear-gradient(rgba(60,60,55,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(60,60,55,.08) 1px,transparent 1px)", backgroundSize: "46px 46px" }} />
+          <div className="absolute bottom-0 left-0 top-[18%] w-[9%] bg-[linear-gradient(90deg,#c8cbc7,#eef0ed)]" />
+          <div className="absolute bottom-0 right-0 top-[18%] w-[9%] bg-[linear-gradient(270deg,#c8cbc7,#eef0ed)]" />
+
+          <div className="absolute left-[3%] top-[25%] z-10 h-[35%] w-[9%] rounded-sm bg-[#252925] shadow-xl"><div className="absolute inset-x-2 top-3 h-1 bg-white/15" /><div className="absolute inset-x-2 top-1/3 h-1 bg-white/15" /><div className="absolute inset-x-2 top-2/3 h-1 bg-white/15" /><span className="absolute inset-x-0 bottom-2 text-center text-[7px] font-black text-white/30">BOOKS</span></div>
+          <div className="absolute left-[3%] top-[57%] z-10 h-[24%] w-[9%] rounded-sm bg-[linear-gradient(90deg,#b9bdba,#e5e7e5)] shadow-xl"><span className="absolute inset-x-0 top-1/2 h-px bg-black/20" /></div>
+          <div className="absolute right-[2%] top-[26%] z-10 h-[38%] w-[11%] bg-[#f4f4f2] shadow-xl"><div className="absolute inset-x-0 top-0 h-[18%] bg-[#d7d9d6]" /><div className="absolute left-[10%] top-[24%] h-[24%] w-[80%] rounded bg-[#242724]" /><span className="absolute bottom-3 left-3 text-[7px] font-black text-stone-400">SINK · KITCHEN</span></div>
 
           {seats.map((seat, index) => {
             const member = roomMembers[index];
             const isSpeaking = stage === "introductions" && index === speakerIndex && Boolean(member);
             return (
               <div key={index} className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 transition duration-500 ${isSpeaking ? "scale-125" : "scale-100 opacity-95"}`} style={{ left: `${seat.x}%`, top: `${seat.y}%` }}>
-                <div className="absolute left-1/2 top-8 h-10 w-20 -translate-x-1/2 rotate-3 rounded-lg bg-[#695239] shadow-[0_10px_10px_rgba(0,0,0,.28)] sm:h-12 sm:w-24"><span className="absolute -top-2 left-3 h-5 w-8 rounded-sm bg-[#18221e] ring-2 ring-[#7f8e83]" /></div>
+                <div className="absolute left-1/2 top-5 h-16 w-24 -translate-x-1/2 rounded-sm bg-[#d8d9d6] shadow-[0_12px_14px_rgba(0,0,0,.24)] sm:w-28"><span className="absolute inset-x-0 bottom-0 h-[42%] bg-[#5f842f]" /><span className="absolute left-1/2 top-0 h-full w-px bg-black/10" /></div>
+                <div className="absolute left-1/2 top-11 h-9 w-20 -translate-x-1/2 rounded-sm bg-[#b78a57] shadow-[0_9px_10px_rgba(0,0,0,.24)] sm:w-24"><span className="absolute -top-3 left-3 h-6 w-9 rounded-sm bg-[#232825] ring-2 ring-[#939c96]" /></div>
                 <div className="relative flex flex-col items-center">
                   <span className={`mb-1 max-w-28 truncate rounded-full px-2.5 py-1 text-[9px] font-black shadow-lg backdrop-blur ${isSpeaking ? "bg-[#ffd84d] text-stone-950" : "bg-black/55 text-white"}`}>{member?.name ?? "빈 자리"}</span>
                   {member ? <div className={isSpeaking ? "lab-character-wave" : "lab-character-float"}><CharacterAvatar config={member.avatarConfig} background={member.avatarBackground} name={member.name} size={52} className="ring-2 ring-white/20" /></div> : <div className="flex h-[52px] w-[52px] items-center justify-center rounded-[34%] border-2 border-dashed border-white/15 bg-black/10 text-white/20">+</div>}
@@ -128,7 +136,7 @@ export default function LabTourPage() {
             return <button key={object.id} type="button" disabled={stage !== "game" || found} onClick={() => selectObject(object.id)} aria-label={object.label} className={`absolute z-30 -translate-x-1/2 -translate-y-1/2 rounded-xl p-2 text-3xl transition sm:text-4xl ${stage === "game" && !found ? "cursor-pointer hover:scale-125 hover:bg-white/15" : "cursor-default"} ${found ? "scale-75 opacity-25" : "drop-shadow-[0_8px_5px_rgba(0,0,0,.35)]"}`} style={{ left: `${object.x}%`, top: `${object.y}%` }}>{object.emoji}</button>;
           })}
 
-          <div className="absolute bottom-[8%] left-1/2 z-10 h-[18%] w-[28%] -translate-x-1/2 rounded-[50%] bg-[#746044] shadow-[0_18px_25px_rgba(0,0,0,.28)]"><span className="absolute inset-[12%] rounded-[50%] border border-white/10" /></div>
+          <div className="pointer-events-none absolute bottom-0 left-[47%] top-[20%] z-10 w-[6%] bg-gradient-to-b from-white/5 to-white/20" />
         </div>
       </section>
 
