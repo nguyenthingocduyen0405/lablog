@@ -1,5 +1,32 @@
 import { createClient } from "./supabase/client";
 
+export type AvatarConfig = {
+  skin: string;
+  hair: "wave" | "sprout" | "cap" | "short";
+  hairColor: string;
+  outfitColor: string;
+  accessory: "none" | "glasses" | "star" | "headphones";
+};
+
+export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
+  skin: "#f2b98c",
+  hair: "wave",
+  hairColor: "#3d2a22",
+  outfitColor: "#7c5cff",
+  accessory: "none",
+};
+
+export function mapAvatarConfig(value: unknown): AvatarConfig {
+  const config = value && typeof value === "object" ? value as Partial<AvatarConfig> : {};
+  return {
+    skin: typeof config.skin === "string" ? config.skin : DEFAULT_AVATAR_CONFIG.skin,
+    hair: ["wave", "sprout", "cap", "short"].includes(String(config.hair)) ? config.hair as AvatarConfig["hair"] : DEFAULT_AVATAR_CONFIG.hair,
+    hairColor: typeof config.hairColor === "string" ? config.hairColor : DEFAULT_AVATAR_CONFIG.hairColor,
+    outfitColor: typeof config.outfitColor === "string" ? config.outfitColor : DEFAULT_AVATAR_CONFIG.outfitColor,
+    accessory: ["none", "glasses", "star", "headphones"].includes(String(config.accessory)) ? config.accessory as AvatarConfig["accessory"] : DEFAULT_AVATAR_CONFIG.accessory,
+  };
+}
+
 export type LabMember = {
   id: string;
   name: string;
@@ -7,6 +34,7 @@ export type LabMember = {
   role: string;
   status: string;
   avatarBackground: string;
+  avatarConfig: AvatarConfig;
 };
 
 export const POST_STATUSES = [
@@ -89,6 +117,7 @@ export type LabNotification = {
   actorName: string;
   actorInitials: string;
   actorAvatarBackground: string;
+  actorAvatarConfig: AvatarConfig;
   createdAt: string;
   readAt: string | null;
 };
@@ -181,7 +210,7 @@ export async function loadLabMembers(): Promise<LabMember[]> {
   const cached = validCache(membersCache);
   if (cached) return cached;
   const supabase = createClient();
-  const { data, error } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background").order("created_at");
+  const { data, error } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config").order("created_at");
   if (error) throw error;
   const members = (data ?? []).map((profile) => ({
     id: profile.id,
@@ -190,9 +219,17 @@ export async function loadLabMembers(): Promise<LabMember[]> {
     status: profile.status,
     initials: profile.initials,
     avatarBackground: profile.avatar_background,
+    avatarConfig: mapAvatarConfig(profile.avatar_config),
   }));
   membersCache = { value: members, expiresAt: Date.now() + DATA_CACHE_MS };
   return members;
+}
+
+export async function saveAvatarConfig(userId: string, avatarConfig: AvatarConfig) {
+  const supabase = createClient();
+  const { error } = await supabase.from("profiles").update({ avatar_config: avatarConfig }).eq("id", userId);
+  if (error) throw error;
+  membersCache = null;
 }
 
 export async function loadCalendarEvents(): Promise<CalendarEvent[]> {
@@ -503,7 +540,7 @@ export async function loadNotifications(userId: string): Promise<LabNotification
   const rows = data ?? [];
   const actorIds = [...new Set(rows.map((item) => item.actor_id).filter((id): id is string => Boolean(id)))];
   const result = actorIds.length
-    ? await supabase.from("profiles").select("id,name,initials,avatar_background").in("id", actorIds)
+    ? await supabase.from("profiles").select("id,name,initials,avatar_background,avatar_config").in("id", actorIds)
     : { data: [], error: null };
   if (result.error) throw result.error;
   const notifications = rows.map((item) => {
@@ -520,6 +557,7 @@ export async function loadNotifications(userId: string): Promise<LabNotification
       actorName: actor?.name ?? "Lab member",
       actorInitials: actor?.initials ?? "LB",
       actorAvatarBackground: actor?.avatar_background ?? "linear-gradient(135deg, #ffd84d, #ff8a4c)",
+      actorAvatarConfig: mapAvatarConfig(actor?.avatar_config),
       createdAt: item.created_at,
       readAt: item.read_at,
     };

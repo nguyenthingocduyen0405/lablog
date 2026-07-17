@@ -1,4 +1,4 @@
-import type { LabMember } from "./lab-social";
+import { mapAvatarConfig, type LabMember } from "./lab-social";
 import { createClient } from "./supabase/client";
 
 export type AuthUser = LabMember & { email: string; onboardingCompletedAt: string | null };
@@ -21,16 +21,17 @@ function makeInitials(name: string) {
   return Array.from(name.trim()).slice(0, 2).join("").toUpperCase();
 }
 
-function mapProfile(profile: Record<string, string | null>, email = ""): AuthUser {
+function mapProfile(profile: Record<string, unknown>, email = ""): AuthUser {
   return {
-    id: profile.id ?? "",
-    name: profile.name ?? "",
+    id: String(profile.id ?? ""),
+    name: String(profile.name ?? ""),
     email,
-    initials: profile.initials ?? "",
-    role: profile.role ?? "",
-    status: profile.status ?? "",
-    avatarBackground: profile.avatar_background ?? "linear-gradient(135deg, #ffd84d, #ff8a4c)",
-    onboardingCompletedAt: profile.onboarding_completed_at,
+    initials: String(profile.initials ?? ""),
+    role: String(profile.role ?? ""),
+    status: String(profile.status ?? ""),
+    avatarBackground: String(profile.avatar_background ?? "linear-gradient(135deg, #ffd84d, #ff8a4c)"),
+    avatarConfig: mapAvatarConfig(profile.avatar_config),
+    onboardingCompletedAt: typeof profile.onboarding_completed_at === "string" ? profile.onboarding_completed_at : null,
   };
 }
 
@@ -68,7 +69,7 @@ async function fetchCurrentUser(): Promise<AuthUser | null> {
     await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
     return null;
   }
-  const { data: profile, error: profileError } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,onboarding_completed_at").eq("id", authData.user.id).single();
+  const { data: profile, error: profileError } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config,onboarding_completed_at").eq("id", authData.user.id).single();
   if (profileError) {
     if (profileError.code === "PGRST116") await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
     return null;

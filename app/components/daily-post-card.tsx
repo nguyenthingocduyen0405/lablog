@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
+import CharacterAvatar from "./character-avatar";
 import {
   createPostComment,
+  DEFAULT_AVATAR_CONFIG,
   formatPostDate,
   getPostStatus,
   setPostReaction,
@@ -93,9 +95,7 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
         )}
         <div className="relative z-10 flex items-start justify-between gap-2">
           <Link href={`/members/${member.id}`} className="flex w-fit items-center gap-2 rounded-full bg-black/25 py-1.5 pl-1.5 pr-3 backdrop-blur-md transition hover:bg-black/40">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-black text-stone-900" style={{ background: member.avatarBackground }}>
-              {member.initials}
-            </span>
+            <CharacterAvatar config={member.avatarConfig} background={member.avatarBackground} name={member.name} size={32} />
             <span className="text-sm font-bold">{member.name}</span>
           </Link>
           <div className="flex min-w-0 max-w-[68%] flex-col items-end gap-2">
@@ -146,7 +146,7 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
                 const author = members.find((item) => item.id === comment.userId);
                 return (
                   <div key={comment.id} className="flex gap-2">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[9px] font-black" style={{ background: author?.avatarBackground ?? "#e7e5e4" }}>{author?.initials ?? "LB"}</span>
+                    <CharacterAvatar config={author?.avatarConfig ?? DEFAULT_AVATAR_CONFIG} background={author?.avatarBackground ?? "#e7e5e4"} name={author?.name ?? "Lab member"} size={32} />
                     <div className="min-w-0 rounded-2xl bg-stone-100 px-3 py-2 text-xs">
                       <p className="font-black">{author?.name ?? "Lab member"}</p>
                       <p className="mt-0.5 break-words font-medium leading-5 text-stone-600">{comment.body}</p>

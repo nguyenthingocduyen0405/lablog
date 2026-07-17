@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import AppHeader from "../components/app-header";
+import CharacterAvatar from "../components/character-avatar";
 import DailyPostCard from "../components/daily-post-card";
 import { getCurrentUser, type AuthUser } from "../lib/auth";
 import {
@@ -151,7 +152,7 @@ export default function UpdatePage() {
             </div>
 
             <div className="px-1 sm:px-3">
-              <div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-full text-xs font-black text-stone-950" style={{ background: user.avatarBackground }}>{user.initials}</span><div><p className="font-bold">{user.name}</p><p className="text-xs text-white/45">{"\uC624\uB298 \uBB50 \uD588\uC5B4\uC694?"}</p></div></div>
+              <div className="flex items-center gap-3"><CharacterAvatar config={user.avatarConfig} background={user.avatarBackground} name={user.name} size={44} /><div><p className="font-bold">{user.name}</p><p className="text-xs text-white/45">{"\uC624\uB298 \uBB50 \uD588\uC5B4\uC694?"}</p></div></div>
               <textarea name="caption" required maxLength={180} placeholder={"\uBC30\uC6B4 \uAC83, \uC9C4\uD589\uD55C \uAC83, \uB9C9\uD78C \uC810\uC744 \uB0A8\uACA8 \uBCF4\uC138\uC694..."} className="mt-5 min-h-32 w-full resize-none border-0 bg-transparent text-xl font-bold leading-8 text-white outline-none placeholder:text-white/25 sm:text-2xl" />
               {missions.length > 0 ? (
                 <fieldset className="mt-4">
@@ -182,7 +183,7 @@ export default function UpdatePage() {
               const availability = getMemberAvailability(calendarEvents, member.id);
               return (
               <Link key={member.id} href={`/members/${member.id}`} className="flex min-w-48 items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/[0.05] transition hover:-translate-y-0.5">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[10px] font-black" style={{ background: member.avatarBackground }}>{member.initials}</span>
+                <CharacterAvatar config={member.avatarConfig} background={member.avatarBackground} name={member.name} size={44} />
                 <span className="min-w-0"><span className="block truncate text-sm font-black">{member.name}</span>{availability ? <span className="mt-1 inline-flex max-w-full items-center gap-1 truncate rounded-full px-2 py-1 text-[9px] font-black text-stone-950" style={{ backgroundColor: availability.color }}>{availability.emoji} {availability.label}</span> : <span className="mt-0.5 block truncate text-[10px] font-semibold text-stone-400">연구실 상태 미등록</span>}</span>
               </Link>
               );

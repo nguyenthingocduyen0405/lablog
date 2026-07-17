@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logoutAccount, type AuthUser } from "../lib/auth";
+import CharacterAvatar from "./character-avatar";
 import FloatingNav from "./floating-nav";
 import NotificationsBell from "./notifications-bell";
 
@@ -20,8 +21,8 @@ export default function AppHeader({ user }: { user: AuthUser }) {
 
         <div className="flex items-center gap-2">
           <NotificationsBell userId={user.id} />
-          <Link href={`/members/${user.id}`} aria-label="Profile" className="flex h-10 w-10 items-center justify-center rounded-full text-[10px] font-black text-stone-950 shadow-sm ring-2 ring-white" style={{ background: user.avatarBackground }}>
-            {user.initials}
+          <Link href={`/members/${user.id}`} aria-label="Profile" className="rounded-[.85rem] shadow-sm ring-2 ring-white">
+            <CharacterAvatar config={user.avatarConfig} background={user.avatarBackground} name={user.name} size={40} />
           </Link>
           <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="hidden rounded-full px-3 py-2 text-xs font-bold text-stone-400 hover:bg-white hover:text-stone-900 lg:block">
             {"\uB85C\uADF8\uC544\uC6C3"}

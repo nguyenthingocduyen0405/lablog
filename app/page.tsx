@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { completeOnboarding, getCurrentUser, logoutAccount, type AuthUser } from "./lib/auth";
 import { loadActiveMission } from "./lib/lab-social";
+import CharacterAvatar from "./components/character-avatar";
 
 function OsLabLogo() {
   return (
@@ -72,7 +73,7 @@ export default function ReadyPage() {
         <p className="text-xs font-black uppercase tracking-[0.24em] text-stone-400">OS LAB</p>
         <div className="flex items-center gap-3">
           <span className="hidden text-sm font-bold text-stone-400 sm:block">{user.name}</span>
-          <Link href={`/members/${user.id}`} className="flex h-10 w-10 items-center justify-center rounded-full text-[10px] font-black ring-2 ring-white shadow-sm" style={{ background: user.avatarBackground }}>{user.initials}</Link>
+          <Link href={`/members/${user.id}`} className="rounded-[.85rem] ring-2 ring-white shadow-sm"><CharacterAvatar config={user.avatarConfig} background={user.avatarBackground} name={user.name} size={40} /></Link>
           <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="text-xs font-bold text-stone-400 hover:text-stone-950">{"\uB85C\uADF8\uC544\uC6C3"}</button>
         </div>
       </header>

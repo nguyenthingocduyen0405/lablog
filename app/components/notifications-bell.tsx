@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ensureDailyStreakReminder, formatPostDate, loadNotifications, markNotificationsRead, type LabNotification } from "../lib/lab-social";
+import CharacterAvatar from "./character-avatar";
 
 export default function NotificationsBell({ userId }: { userId: string }) {
   const [notifications, setNotifications] = useState<LabNotification[]>([]);
@@ -55,9 +56,7 @@ export default function NotificationsBell({ userId }: { userId: string }) {
               </div>
             ) : notifications.map((item) => (
               <Link key={item.id} href={item.type.endsWith("_reminder") ? "/update#new-post" : `/update#post-${item.postId}`} onClick={() => setIsOpen(false)} className="flex gap-3 border-b border-stone-100 px-4 py-4 transition last:border-0 hover:bg-[#fff9df]">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[10px] font-black" style={item.type.endsWith("_reminder") ? { background: "#ffd84d", fontSize: "1.25rem" } : { background: item.actorAvatarBackground }}>
-                  {item.type === "streak_reminder" ? "🔥" : item.actorInitials}
-                </span>
+                {item.type.endsWith("_reminder") ? <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffd84d] text-xl">{item.type === "streak_reminder" ? "🔥" : "🎯"}</span> : <CharacterAvatar config={item.actorAvatarConfig} background={item.actorAvatarBackground} name={item.actorName} size={40} />}
                 <span className="min-w-0 text-sm leading-5">
                   {item.type === "mission_reminder" ? (
                     <>

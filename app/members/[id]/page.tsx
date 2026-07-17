@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import AvatarDesigner from "../../components/avatar-designer";
+import CharacterAvatar from "../../components/character-avatar";
 import DailyPostCard from "../../components/daily-post-card";
 import FloatingNav from "../../components/floating-nav";
 import NotificationsBell from "../../components/notifications-bell";
@@ -93,7 +95,7 @@ export default function MemberProfilePage() {
           <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full opacity-40 blur-3xl" style={{ background: member.avatarBackground }} />
           <div className="relative flex flex-col gap-7 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-5">
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full text-2xl font-black text-stone-950 shadow-[0_0_0_6px_rgba(255,255,255,.08)] sm:h-28 sm:w-28" style={{ background: member.avatarBackground }}>{member.initials}</div>
+              <CharacterAvatar config={member.avatarConfig} background={member.avatarBackground} name={member.name} size={112} className="ring-8 ring-white/10 shadow-2xl" />
               <div>
                 <div className="flex items-center gap-2"><h1 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">{member.name}</h1>{isMe && <span className="rounded-full bg-[#ffd84d] px-2 py-1 text-[10px] font-black text-stone-950">ME</span>}</div>
                 <p className="mt-2 text-sm font-semibold text-white/55">{member.role}</p>
@@ -104,6 +106,7 @@ export default function MemberProfilePage() {
               <div className="min-w-24 rounded-2xl bg-orange-500/20 px-5 py-4 text-center"><p className="text-2xl font-black">🔥 {currentStreak}</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">day streak</p></div>
               <div className="min-w-24 rounded-2xl bg-violet-500/20 px-5 py-4 text-center"><p className="text-2xl font-black">{totalScore}P</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">score</p></div>
               <div className="min-w-24 rounded-2xl bg-white/10 px-5 py-4 text-center"><p className="text-2xl font-black">{memberPosts.length}</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">records</p></div>
+              {isMe && <AvatarDesigner userId={currentUser.id} name={currentUser.name} background={currentUser.avatarBackground} initialConfig={currentUser.avatarConfig} onSaved={(avatarConfig) => { setCurrentUser((current) => current ? { ...current, avatarConfig } : current); setMembers((items) => items.map((item) => item.id === currentUser.id ? { ...item, avatarConfig } : item)); }} />}
               {isMe && <Link href="/update#new-post" className="flex items-center rounded-2xl bg-[#ffd84d] px-5 py-3 text-sm font-black text-stone-950 transition hover:-translate-y-0.5">{"\uC0C8 \uAE30\uB85D \uC62C\uB9AC\uAE30"}</Link>}
             </div>
           </div>
@@ -134,7 +137,7 @@ export default function MemberProfilePage() {
           <div className="flex flex-wrap gap-3">
             {members.filter((item) => item.id !== member.id).map((item) => (
               <Link key={item.id} href={`/members/${item.id}`} className="flex items-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-4 text-sm font-bold shadow-sm ring-1 ring-black/[0.05] transition hover:-translate-y-0.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-black" style={{ background: item.avatarBackground }}>{item.initials}</span>{item.name}
+                <CharacterAvatar config={item.avatarConfig} background={item.avatarBackground} name={item.name} size={36} />{item.name}
               </Link>
             ))}
           </div>
