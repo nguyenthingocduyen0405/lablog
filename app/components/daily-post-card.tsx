@@ -89,7 +89,7 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70" />
         {post.imageDataUrl && (
-          <button type="button" aria-label="View larger photo" onClick={() => setIsImageOpen(true)} className="absolute inset-0 z-[5] cursor-zoom-in" />
+          <button type="button" aria-label="View larger photo" onClick={() => setIsImageOpen(true)} className="absolute inset-0 z-[5] cursor-pointer" />
         )}
         <div className="relative z-10 flex items-center justify-between gap-2">
           <Link href={`/members/${member.id}`} className="flex w-fit items-center gap-2 rounded-full bg-black/25 py-1.5 pl-1.5 pr-3 backdrop-blur-md transition hover:bg-black/40">
