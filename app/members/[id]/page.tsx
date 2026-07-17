@@ -95,7 +95,14 @@ export default function MemberProfilePage() {
           <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full opacity-40 blur-3xl" style={{ background: member.avatarBackground }} />
           <div className="relative flex flex-col gap-7 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-5">
-              <CharacterAvatar config={member.avatarConfig} background={member.avatarBackground} name={member.name} size={112} className="ring-8 ring-white/10 shadow-2xl" />
+              <div className="relative shrink-0">
+                <CharacterAvatar config={member.avatarConfig} background={member.avatarBackground} name={member.name} size={112} className="ring-8 ring-white/10 shadow-2xl" />
+                {isMe && (
+                  <div className="absolute -bottom-1 -right-1">
+                    <AvatarDesigner userId={currentUser.id} name={currentUser.name} background={currentUser.avatarBackground} initialConfig={currentUser.avatarConfig} onSaved={(avatarConfig) => { setCurrentUser((current) => current ? { ...current, avatarConfig } : current); setMembers((items) => items.map((item) => item.id === currentUser.id ? { ...item, avatarConfig } : item)); }} />
+                  </div>
+                )}
+              </div>
               <div>
                 <div className="flex items-center gap-2"><h1 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">{member.name}</h1>{isMe && <span className="rounded-full bg-[#ffd84d] px-2 py-1 text-[10px] font-black text-stone-950">ME</span>}</div>
                 <p className="mt-2 text-sm font-semibold text-white/55">{member.role}</p>
@@ -106,7 +113,6 @@ export default function MemberProfilePage() {
               <div className="min-w-24 rounded-2xl bg-orange-500/20 px-5 py-4 text-center"><p className="text-2xl font-black">🔥 {currentStreak}</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">day streak</p></div>
               <div className="min-w-24 rounded-2xl bg-violet-500/20 px-5 py-4 text-center"><p className="text-2xl font-black">{totalScore}P</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">score</p></div>
               <div className="min-w-24 rounded-2xl bg-white/10 px-5 py-4 text-center"><p className="text-2xl font-black">{memberPosts.length}</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">records</p></div>
-              {isMe && <AvatarDesigner userId={currentUser.id} name={currentUser.name} background={currentUser.avatarBackground} initialConfig={currentUser.avatarConfig} onSaved={(avatarConfig) => { setCurrentUser((current) => current ? { ...current, avatarConfig } : current); setMembers((items) => items.map((item) => item.id === currentUser.id ? { ...item, avatarConfig } : item)); }} />}
               {isMe && <Link href="/update#new-post" className="flex items-center rounded-2xl bg-[#ffd84d] px-5 py-3 text-sm font-black text-stone-950 transition hover:-translate-y-0.5">{"\uC0C8 \uAE30\uB85D \uC62C\uB9AC\uAE30"}</Link>}
             </div>
           </div>

@@ -71,7 +71,7 @@ export default function AvatarDesigner({ userId, name, background, initialConfig
 
   return (
     <>
-      <button type="button" onClick={openDesigner} className="rounded-full bg-white/10 px-4 py-2.5 text-xs font-black text-white ring-1 ring-white/15 transition hover:bg-white/15">캐릭터 꾸미기</button>
+      <button type="button" onClick={openDesigner} aria-label="캐릭터 꾸미기" title="캐릭터 꾸미기" className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffd84d] text-lg font-black text-stone-950 shadow-lg ring-4 ring-[#181611] transition hover:-translate-y-0.5 hover:bg-white">✎</button>
       {isOpen && (
         <div role="dialog" aria-modal="true" aria-labelledby="avatar-designer-title" onClick={() => setIsOpen(false)} className="fixed inset-0 z-[90] flex items-center justify-center bg-black/75 p-4 text-stone-950 backdrop-blur-sm">
           <div onClick={(event) => event.stopPropagation()} className="grid max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-[#f5f3ee] shadow-2xl md:grid-cols-[.72fr_1.28fr]">
