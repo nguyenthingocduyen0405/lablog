@@ -31,6 +31,7 @@ export type DailyPost = {
   id: string;
   memberId: string;
   missionId: string | null;
+  missionTitle: string | null;
   scoreAwarded: number;
   caption: string;
   status: PostStatus;
@@ -107,7 +108,13 @@ export async function loadLabMembers(): Promise<LabMember[]> {
   }));
 }
 
-export async function createDailyPost(file: File, caption: string, status: PostStatus, memberId: string) {
+export async function createDailyPost(
+  file: File,
+  caption: string,
+  status: PostStatus,
+  memberId: string,
+  missionId: string | null,
+) {
   const supabase = createClient();
   const rawExtension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const extension = rawExtension.replace(/[^a-z0-9]/g, "") || "jpg";
@@ -115,7 +122,13 @@ export async function createDailyPost(file: File, caption: string, status: PostS
   const { error: uploadError } = await supabase.storage.from("post-images").upload(imagePath, file, { contentType: file.type, upsert: false });
   if (uploadError) throw uploadError;
 
-  const { data, error: postError } = await supabase.from("posts").insert({ user_id: memberId, caption, status, image_path: imagePath }).select("id,user_id,mission_id,score_awarded,caption,status,image_path,created_at").single();
+  const { data, error: postError } = await supabase.from("posts").insert({
+    user_id: memberId,
+    mission_id: missionId,
+    caption,
+    status,
+    image_path: imagePath,
+  }).select("id,user_id,mission_id,mission_title,score_awarded,caption,status,image_path,created_at").single();
   if (postError) {
     await supabase.storage.from("post-images").remove([imagePath]);
     throw postError;
@@ -125,6 +138,7 @@ export async function createDailyPost(file: File, caption: string, status: PostS
     id: data.id,
     memberId: data.user_id,
     missionId: data.mission_id,
+    missionTitle: data.mission_title,
     scoreAwarded: data.score_awarded,
     caption: data.caption,
     status: data.status as PostStatus,
@@ -139,7 +153,7 @@ export async function createDailyPost(file: File, caption: string, status: PostS
 
 export async function loadDailyPosts(): Promise<DailyPost[]> {
   const supabase = createClient();
-  const { data, error } = await supabase.from("posts").select("id,user_id,mission_id,score_awarded,caption,status,image_path,created_at").order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("posts").select("id,user_id,mission_id,mission_title,score_awarded,caption,status,image_path,created_at").order("created_at", { ascending: false });
   if (error) throw error;
   const posts = data ?? [];
   if (posts.length === 0) return [];
@@ -157,6 +171,7 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
       id: post.id,
       memberId: post.user_id,
       missionId: post.mission_id,
+      missionTitle: post.mission_title,
       scoreAwarded: post.score_awarded ?? 0,
       caption: post.caption,
       status: (post.status ?? "working") as PostStatus,
@@ -199,25 +214,32 @@ export function countMissionUpdateDays(posts: DailyPost[], missionId: string) {
   ).size;
 }
 
-export async function loadActiveMission(userId: string): Promise<Mission | null> {
+export async function loadActiveMissions(userId: string): Promise<Mission[]> {
   const supabase = createClient();
   const { data, error } = await supabase.from("missions")
     .select("id,user_id,title,duration_days,points_per_update,started_on,ends_on,active,created_at")
     .eq("user_id", userId)
     .eq("active", true)
+    .gte("ends_on", seoulDateKey(new Date()))
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(20);
   if (error && error.code !== "PGRST205") throw error;
-  if (!data || String(data.ends_on) < seoulDateKey(new Date())) return null;
-  return mapMission(data);
+  return (data ?? []).map(mapMission);
+}
+
+export async function loadActiveMission(userId: string): Promise<Mission | null> {
+  const missions = await loadActiveMissions(userId);
+  return missions[0] ?? null;
 }
 
 export function missionPointsForDuration(durationDays: number) {
-  return Math.min(50, 5 + Math.ceil(durationDays / 7) * 5);
+  if (durationDays <= 7) return 2;
+  if (durationDays <= 14) return 3;
+  if (durationDays <= 30) return 5;
+  return Math.min(10, 5 + Math.ceil((durationDays - 30) / 30));
 }
 
-export async function setActiveMission(title: string, durationDays: number): Promise<Mission> {
+export async function addMission(title: string, durationDays: number): Promise<Mission> {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("set_my_mission", {
     mission_title: title,
@@ -226,6 +248,8 @@ export async function setActiveMission(title: string, durationDays: number): Pro
   if (error) throw error;
   return mapMission(data);
 }
+
+export const setActiveMission = addMission;
 
 function addDays(value: Date, days: number) {
   const result = new Date(value);

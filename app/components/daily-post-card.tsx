@@ -103,6 +103,12 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
           </span>
         </div>
 
+        {post.missionTitle && (
+          <div className="relative z-10 mt-3 w-fit max-w-full rounded-full bg-violet-300/95 px-3 py-1.5 text-[10px] font-black text-violet-950 shadow-sm backdrop-blur">
+            <span className="block truncate">🎯 {post.missionTitle}</span>
+          </div>
+        )}
+
         {!post.imageDataUrl && (
           <div className="relative z-10 flex flex-1 items-center justify-center text-7xl drop-shadow-lg transition duration-300 group-hover:scale-110">
             {post.emoji}

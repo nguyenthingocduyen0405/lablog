@@ -9,10 +9,9 @@ import { getCurrentUser, type AuthUser } from "../lib/auth";
 import {
   calculateCurrentStreak,
   createDailyPost,
-  hasMissionUpdateToday,
   hasPostedToday,
   isPostStatus,
-  loadActiveMission,
+  loadActiveMissions,
   loadDailyPosts,
   loadLabMembers,
   POST_STATUSES,
@@ -24,7 +23,7 @@ import {
 export default function UpdatePage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [mission, setMission] = useState<Mission | null>(null);
+  const [missions, setMissions] = useState<Mission[]>([]);
   const [posts, setPosts] = useState<DailyPost[]>([]);
   const [members, setMembers] = useState<LabMember[]>([]);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -38,14 +37,14 @@ export default function UpdatePage() {
         router.replace("/login");
         return;
       }
-      const [activeMission, loadedPosts, loadedMembers] = await Promise.all([
-        loadActiveMission(currentUser.id),
+      const [activeMissions, loadedPosts, loadedMembers] = await Promise.all([
+        loadActiveMissions(currentUser.id),
         loadDailyPosts(),
         loadLabMembers(),
       ]);
       if (cancelled) return;
       setUser(currentUser);
-      setMission(activeMission);
+      setMissions(activeMissions);
       setPosts(loadedPosts);
       setMembers(loadedMembers);
     }).catch(() => setMessage("Supabase \uC5F0\uACB0\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."));
@@ -54,7 +53,6 @@ export default function UpdatePage() {
 
   const currentStreak = useMemo(() => user ? calculateCurrentStreak(posts, user.id) : 0, [posts, user]);
   const postedToday = useMemo(() => user ? hasPostedToday(posts, user.id) : false, [posts, user]);
-  const missionUpdated = mission ? hasMissionUpdateToday(posts, mission.id) : false;
   const sortedPosts = useMemo(
     () => [...posts].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
     [posts],
@@ -67,7 +65,12 @@ export default function UpdatePage() {
     const photo = data.get("photo");
     const caption = String(data.get("caption")).trim();
     const statusValue = String(data.get("status"));
+    const missionId = String(data.get("missionId") ?? "") || null;
     if (!(photo instanceof File) || photo.size === 0 || !caption || !isPostStatus(statusValue) || !user) return;
+    if (missions.length > 0 && !missions.some((mission) => mission.id === missionId)) {
+      setMessage("이 업데이트가 어떤 미션의 기록인지 선택해 주세요.");
+      return;
+    }
     if (photo.size > 8 * 1024 * 1024) {
       setMessage("\uC0AC\uC9C4\uC740 8MB \uC774\uD558\uB85C \uC62C\uB824 \uC8FC\uC138\uC694.");
       return;
@@ -76,7 +79,7 @@ export default function UpdatePage() {
     setIsPosting(true);
     setMessage("");
     try {
-      const post = await createDailyPost(photo, caption, statusValue, user.id);
+      const post = await createDailyPost(photo, caption, statusValue, user.id, missionId);
       setPosts((current) => [post, ...current]);
       setPreviewUrl("");
       form.reset();
@@ -109,19 +112,15 @@ export default function UpdatePage() {
           </div>
         </div>
 
-        <div className="mb-5 flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/[0.05] sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-xl">{"\uD83C\uDFAF"}</span>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-stone-400">Current mission</p>
-              <p className="mt-0.5 font-black">{mission?.title ?? "\uC544\uC9C1 \uC120\uD0DD\uD55C \uBBF8\uC158\uC774 \uC5C6\uC5B4\uC694"}</p>
-              {mission && <p className="mt-1 text-xs font-bold text-violet-500">+{mission.pointsPerUpdate}P / day</p>}
+        <div className="mb-5 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-black/[0.05]">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-xl">🎯</span>
+              <div><p className="text-[10px] font-black uppercase tracking-widest text-stone-400">ACTIVE MISSIONS</p><p className="mt-0.5 font-black">{missions.length > 0 ? `${missions.length}개의 미션 진행 중` : "아직 진행 중인 미션이 없어요"}</p></div>
             </div>
+            <Link href="/mission" className="rounded-full bg-stone-100 px-4 py-2 text-xs font-black text-stone-600 hover:bg-stone-200">미션 보기</Link>
           </div>
-          <div className="flex items-center gap-3">
-            {mission && <span className={`text-xs font-black ${missionUpdated ? "text-emerald-600" : "text-amber-600"}`}>{missionUpdated ? "\uC624\uB298 \uC644\uB8CC" : "\uC624\uB298 \uBBF8\uC644\uB8CC"}</span>}
-            <Link href="/mission" className="rounded-full bg-stone-100 px-4 py-2 text-xs font-black text-stone-600 hover:bg-stone-200">{mission ? "\uBBF8\uC158 \uBC14\uAFB8\uAE30" : "\uBBF8\uC158 \uC120\uD0DD"}</Link>
-          </div>
+          {missions.length > 0 && <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{missions.map((mission) => <span key={mission.id} className="shrink-0 rounded-full bg-violet-50 px-3 py-2 text-xs font-black text-violet-700">{mission.title} · +{mission.pointsPerUpdate}P</span>)}</div>}
         </div>
 
         <section id="new-post" className="mx-auto max-w-5xl overflow-hidden rounded-[2.25rem] bg-[#181611] p-4 text-white shadow-[0_24px_80px_rgba(40,32,14,0.18)] sm:p-6">
@@ -148,6 +147,14 @@ export default function UpdatePage() {
             <div className="px-1 sm:px-3">
               <div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-full text-xs font-black text-stone-950" style={{ background: user.avatarBackground }}>{user.initials}</span><div><p className="font-bold">{user.name}</p><p className="text-xs text-white/45">{"\uC624\uB298 \uBB50 \uD588\uC5B4\uC694?"}</p></div></div>
               <textarea name="caption" required maxLength={180} placeholder={"\uBC30\uC6B4 \uAC83, \uC9C4\uD589\uD55C \uAC83, \uB9C9\uD78C \uC810\uC744 \uB0A8\uACA8 \uBCF4\uC138\uC694..."} className="mt-5 min-h-32 w-full resize-none border-0 bg-transparent text-xl font-bold leading-8 text-white outline-none placeholder:text-white/25 sm:text-2xl" />
+              {missions.length > 0 ? (
+                <fieldset className="mt-4">
+                  <legend className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-white/45">어떤 미션의 기록인가요?</legend>
+                  <div className="flex flex-wrap gap-2">{missions.map((mission, index) => <label key={mission.id} className="cursor-pointer"><input className="peer sr-only" type="radio" name="missionId" value={mission.id} defaultChecked={index === 0} /><span className="inline-flex rounded-full bg-white/10 px-3 py-2 text-xs font-bold text-white/65 ring-1 ring-white/10 transition peer-checked:bg-[#b59cff] peer-checked:text-stone-950">🎯 {mission.title}</span></label>)}</div>
+                </fieldset>
+              ) : (
+                <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-white/[0.06] px-4 py-3"><p className="text-xs font-bold text-white/45">미션 없이 일반 기록으로 저장돼요.</p><Link href="/mission" className="shrink-0 text-xs font-black text-[#ffd84d]">미션 추가 →</Link></div>
+              )}
               <fieldset className="mt-4"><legend className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-white/45">{"\uAE30\uB85D \uC0C1\uD0DC"}</legend><div className="flex flex-wrap gap-2">{POST_STATUSES.map((status) => <label key={status.value} className="cursor-pointer"><input className="peer sr-only" type="radio" name="status" value={status.value} defaultChecked={status.value === "working"} /><span className="inline-flex rounded-full bg-white/10 px-3 py-2 text-xs font-bold text-white/65 ring-1 ring-white/10 transition peer-checked:bg-[#ffd84d] peer-checked:text-stone-950">{status.emoji} {status.label}</span></label>)}</div></fieldset>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs font-medium text-white/35">{"\uAE30\uB85D\uC740 \uBBF8\uC158\uACFC \uD53C\uB4DC\uC5D0 \uBC14\uB85C \uBC18\uC601\uB3FC\uC694."}</p><button disabled={isPosting} type="submit" className="rounded-full bg-[#ffd84d] px-6 py-3 text-sm font-black text-stone-950 shadow-[0_5px_0_#a88400] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-none disabled:opacity-50">{isPosting ? "\uC62C\uB9AC\uB294 \uC911..." : "\uC624\uB298 \uC5C5\uB370\uC774\uD2B8"}</button></div>
               {message && <p className="mt-4 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-[#ffe785]">{message}</p>}

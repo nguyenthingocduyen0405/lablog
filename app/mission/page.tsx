@@ -6,12 +6,12 @@ import { useEffect, useState } from "react";
 import AppHeader from "../components/app-header";
 import MissionPanel from "../components/mission-panel";
 import { getCurrentUser, type AuthUser } from "../lib/auth";
-import { loadActiveMission, loadDailyPosts, type DailyPost, type Mission } from "../lib/lab-social";
+import { loadActiveMissions, loadDailyPosts, type DailyPost, type Mission } from "../lib/lab-social";
 
 export default function MissionPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [mission, setMission] = useState<Mission | null>(null);
+  const [missions, setMissions] = useState<Mission[]>([]);
   const [posts, setPosts] = useState<DailyPost[]>([]);
   const [message, setMessage] = useState("");
 
@@ -22,13 +22,13 @@ export default function MissionPage() {
         router.replace("/login");
         return;
       }
-      const [activeMission, loadedPosts] = await Promise.all([
-        loadActiveMission(currentUser.id),
+      const [activeMissions, loadedPosts] = await Promise.all([
+        loadActiveMissions(currentUser.id),
         loadDailyPosts(),
       ]);
       if (cancelled) return;
       setUser(currentUser);
-      setMission(activeMission);
+      setMissions(activeMissions);
       setPosts(loadedPosts);
     }).catch(() => setMessage("Supabase \uC5F0\uACB0\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."));
     return () => { cancelled = true; };
@@ -47,16 +47,16 @@ export default function MissionPage() {
             <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-500">02 / Mission</p>
             <h1 className="mt-3 text-4xl font-black tracking-[-0.055em] sm:text-6xl">{"\uC624\uB298\uBD80\uD130 \uC5B4\uB5A4"}<br />{"\uB3C4\uC804\uC744 \uD560\uAE4C\uC694?"}</h1>
           </div>
-          <p className="max-w-sm text-sm font-semibold leading-6 text-stone-400 sm:text-right">{"\uD55C \uBC88\uC5D0 \uD558\uB098\uC758 \uBBF8\uC158\uC5D0 \uC9D1\uC911\uD574 \uBCF4\uC138\uC694. \uB9E4\uC77C \uC5C5\uB370\uC774\uD2B8\uAC00 \uC9C4\uD589\uB960\uC5D0 \uBC18\uC601\uB429\uB2C8\uB2E4."}</p>
+          <p className="max-w-sm text-sm font-semibold leading-6 text-stone-400 sm:text-right">여러 미션을 함께 진행할 수 있어요. 시작한 미션은 종료일까지 유지되며, 각 업데이트는 하나의 미션에 기록됩니다.</p>
         </div>
 
-        <MissionPanel mission={mission} posts={posts} onMissionChange={setMission} />
+        <MissionPanel missions={missions} posts={posts} onMissionAdded={(mission) => setMissions((current) => [mission, ...current])} />
 
         {message && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{message}</p>}
 
         <div className="mt-8 flex items-center justify-between border-t border-black/[0.08] pt-6">
           <Link href="/" className="text-sm font-black text-stone-400 hover:text-stone-900">{"\u2190 \uC774\uC804"}</Link>
-          {mission ? (
+          {missions.length > 0 ? (
             <Link href="/update" className="group inline-flex items-center gap-4 rounded-full bg-stone-950 py-2.5 pl-6 pr-2.5 text-sm font-black text-white shadow-[0_7px_0_#c7a600] transition hover:-translate-y-0.5">
               {"\uC5C5\uB370\uC774\uD130 \uC2DC\uC791"}
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffd84d] text-stone-950">{"\u2192"}</span>
