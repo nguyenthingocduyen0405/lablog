@@ -26,6 +26,7 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
   const [reactions, setReactions] = useState(post.reactions);
   const [comments, setComments] = useState(post.comments);
   const [showComments, setShowComments] = useState(false);
+  const [isImageOpen, setIsImageOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const myReaction = reactions.find((item) => item.userId === currentUserId)?.emoji;
@@ -74,6 +75,7 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
   }
 
   return (
+    <>
     <article id={`post-${post.id}`} className="group scroll-mt-24 overflow-hidden rounded-[2rem] bg-white p-2 shadow-[0_18px_55px_rgba(35,31,24,0.10)] ring-1 ring-black/[0.05] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(35,31,24,0.16)]">
       <div
         className="relative flex aspect-[4/5] flex-col justify-between overflow-hidden rounded-[1.55rem] bg-stone-950 p-5 text-white"
@@ -86,6 +88,9 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
           </>
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70" />
+        {post.imageDataUrl && (
+          <button type="button" aria-label="View larger photo" onClick={() => setIsImageOpen(true)} className="absolute inset-0 z-[5] cursor-zoom-in" />
+        )}
         <div className="relative z-10 flex items-center justify-between gap-2">
           <Link href={`/members/${member.id}`} className="flex w-fit items-center gap-2 rounded-full bg-black/25 py-1.5 pl-1.5 pr-3 backdrop-blur-md transition hover:bg-black/40">
             <span className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-black text-stone-900" style={{ background: member.avatarBackground }}>
@@ -151,5 +156,12 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
         )}
       </div>
     </article>
+    {isImageOpen && post.imageDataUrl && (
+      <div role="dialog" aria-modal="true" aria-label="Photo preview" onClick={() => setIsImageOpen(false)} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-5 backdrop-blur-sm">
+        <button type="button" aria-label="Close photo preview" onClick={() => setIsImageOpen(false)} className="absolute right-5 top-5 flex h-11 w-11 items-center justify-center rounded-full bg-white text-2xl font-medium text-stone-950 shadow-lg">{"\u00D7"}</button>
+        <button type="button" onClick={(event) => event.stopPropagation()} className="h-[70vh] max-h-[36rem] w-[88vw] max-w-[44rem] cursor-default rounded-[1.5rem] bg-stone-950 bg-contain bg-center bg-no-repeat shadow-[0_30px_100px_rgba(0,0,0,.5)]" style={{ backgroundImage: `url("${post.imageDataUrl}")` }} aria-label={post.caption} />
+      </div>
+    )}
+    </>
   );
 }

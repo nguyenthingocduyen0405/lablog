@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import AppHeader from "../components/app-header";
+import DailyPostCard from "../components/daily-post-card";
 import { getCurrentUser, type AuthUser } from "../lib/auth";
 import {
   calculateCurrentStreak,
@@ -13,8 +14,10 @@ import {
   isPostStatus,
   loadActiveMission,
   loadDailyPosts,
+  loadLabMembers,
   POST_STATUSES,
   type DailyPost,
+  type LabMember,
   type Mission,
 } from "../lib/lab-social";
 
@@ -23,6 +26,7 @@ export default function UpdatePage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [mission, setMission] = useState<Mission | null>(null);
   const [posts, setPosts] = useState<DailyPost[]>([]);
+  const [members, setMembers] = useState<LabMember[]>([]);
   const [previewUrl, setPreviewUrl] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [message, setMessage] = useState("");
@@ -34,14 +38,16 @@ export default function UpdatePage() {
         router.replace("/login");
         return;
       }
-      const [activeMission, loadedPosts] = await Promise.all([
+      const [activeMission, loadedPosts, loadedMembers] = await Promise.all([
         loadActiveMission(currentUser.id),
         loadDailyPosts(),
+        loadLabMembers(),
       ]);
       if (cancelled) return;
       setUser(currentUser);
       setMission(activeMission);
       setPosts(loadedPosts);
+      setMembers(loadedMembers);
     }).catch(() => setMessage("Supabase \uC5F0\uACB0\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."));
     return () => { cancelled = true; };
   }, [router]);
@@ -49,6 +55,10 @@ export default function UpdatePage() {
   const currentStreak = useMemo(() => user ? calculateCurrentStreak(posts, user.id) : 0, [posts, user]);
   const postedToday = useMemo(() => user ? hasPostedToday(posts, user.id) : false, [posts, user]);
   const missionUpdated = mission ? hasMissionUpdateToday(posts, mission.id) : false;
+  const sortedPosts = useMemo(
+    () => [...posts].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    [posts],
+  );
 
   async function submitUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -114,9 +124,9 @@ export default function UpdatePage() {
           </div>
         </div>
 
-        <section id="new-post" className="overflow-hidden rounded-[2.25rem] bg-[#181611] p-4 text-white shadow-[0_24px_80px_rgba(40,32,14,0.18)] sm:p-6">
-          <form onSubmit={submitUpdate} className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
-            <div className="relative">
+        <section id="new-post" className="mx-auto max-w-5xl overflow-hidden rounded-[2.25rem] bg-[#181611] p-4 text-white shadow-[0_24px_80px_rgba(40,32,14,0.18)] sm:p-6">
+          <form onSubmit={submitUpdate} className="grid gap-6 lg:grid-cols-[0.68fr_1.32fr] lg:items-center">
+            <div className="relative mx-auto w-full max-w-sm">
               <label className="group relative block aspect-[4/3] cursor-pointer overflow-hidden rounded-[1.75rem] border-2 border-dashed border-white/20 bg-white/[0.06] transition hover:border-[#ffd84d]/70" style={previewUrl ? { backgroundImage: `url("${previewUrl}")`, backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat", backgroundColor: "#0c0a09" } : undefined}>
                 {!previewUrl && <span className="absolute inset-0 flex flex-col items-center justify-center text-center"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#ffd84d] text-3xl text-stone-950">{"\uD83D\uDCF7"}</span><span className="mt-4 text-sm font-bold">{"\uC624\uB298\uC758 \uC0AC\uC9C4 \uACE0\uB974\uAE30"}</span><span className="mt-1 text-xs text-white/45">JPG, PNG, WEBP - max 8MB</span></span>}
                 {previewUrl && <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-3 py-1.5 text-xs font-bold backdrop-blur">{"\uC0AC\uC9C4 \uBC14\uAFB8\uAE30"}</span>}
@@ -145,7 +155,38 @@ export default function UpdatePage() {
           </form>
         </section>
 
-        <div className="mt-7 flex justify-between"><Link href="/mission" className="text-sm font-black text-stone-400 hover:text-stone-900">{"\u2190 Mission"}</Link><Link href="/feed" className="text-sm font-black text-stone-900 hover:underline">{"\uD53C\uB4DC\uC5D0\uC11C \uD655\uC778 \u2192"}</Link></div>
+        <section id="feed" className="mt-16 scroll-mt-24 border-t border-black/[0.08] pt-12">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-500">Team feed</p>
+              <h2 className="mt-2 text-3xl font-black tracking-[-0.045em] sm:text-5xl">{"\uC6B0\uB9AC\uC758 \uC624\uB298"}</h2>
+            </div>
+            <Link href="/mission" className="w-fit rounded-full bg-white px-4 py-2 text-xs font-black text-stone-500 shadow-sm ring-1 ring-black/[0.06] hover:text-stone-950">{"\uBBF8\uC158 \uD655\uC778"}</Link>
+          </div>
+
+          <div className="mb-9 flex gap-3 overflow-x-auto pb-2">
+            {members.map((member) => (
+              <Link key={member.id} href={`/members/${member.id}`} className="flex min-w-40 items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/[0.05] transition hover:-translate-y-0.5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[10px] font-black" style={{ background: member.avatarBackground }}>{member.initials}</span>
+                <span className="min-w-0"><span className="block truncate text-sm font-black">{member.name}</span><span className="mt-0.5 block truncate text-[10px] font-semibold text-stone-400">{member.role}</span></span>
+              </Link>
+            ))}
+          </div>
+
+          {sortedPosts.length > 0 ? (
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {sortedPosts.map((post) => {
+                const member = members.find((item) => item.id === post.memberId);
+                return member ? <DailyPostCard key={post.id} post={post} member={member} currentUserId={user.id} members={members} /> : null;
+              })}
+            </div>
+          ) : (
+            <div className="rounded-[2rem] border-2 border-dashed border-stone-300 bg-white/50 px-6 py-14 text-center">
+              <p className="text-4xl">{"\uD83D\uDCF7"}</p>
+              <p className="mt-3 text-sm font-black text-stone-400">{"\uC544\uC9C1 \uC5C5\uB370\uC774\uD2B8\uAC00 \uC5C6\uC5B4\uC694."}</p>
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );

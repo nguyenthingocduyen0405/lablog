@@ -71,7 +71,7 @@ export default function MemberProfilePage() {
     <main className="min-h-screen bg-[#f5f3ee] text-stone-950">
       <header className="border-b border-black/[0.06] bg-[#f5f3ee]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-8">
-          <Link href="/feed" className="flex items-center gap-2 text-sm font-black transition hover:-translate-x-1">{"\u2190 \uB7A9 \uD53C\uB4DC"}</Link>
+          <Link href="/update#feed" className="flex items-center gap-2 text-sm font-black transition hover:-translate-x-1">{"\u2190 \uB7A9 \uD53C\uB4DC"}</Link>
           <Link href="/" className="text-lg font-black tracking-[-0.04em]">LABLOG</Link>
           <div className="flex items-center gap-2">
             <NotificationsBell userId={currentUser.id} />
