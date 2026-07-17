@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import {
   countMissionUpdateDays,
   hasMissionUpdateToday,
+  missionPointsForDuration,
   setActiveMission,
   type DailyPost,
   type Mission,
@@ -68,7 +69,7 @@ export default function MissionPanel({ mission, posts, onMissionChange }: Missio
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45">{"\uB098\uC758 \uBBF8\uC158"}</p>
                 <h2 className="mt-1 text-xl font-black">{mission.title}</h2>
-                <p className="mt-1 text-xs font-semibold text-white/50">{mission.startedOn} - {mission.endsOn}</p>
+                <p className="mt-1 text-xs font-semibold text-white/50">{mission.startedOn} - {mission.endsOn} · +{mission.pointsPerUpdate}P / day</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -104,7 +105,7 @@ export default function MissionPanel({ mission, posts, onMissionChange }: Missio
               <button key={preset.title} type="button" disabled={isSaving} onClick={() => chooseMission(preset.title, preset.durationDays)} className="rounded-2xl bg-white/10 p-4 text-left ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:bg-white/15 disabled:opacity-50">
                 <span className="text-2xl">{preset.emoji}</span>
                 <span className="mt-3 block text-sm font-black leading-5">{preset.title}</span>
-                <span className="mt-1 block text-xs font-semibold text-white/40">{preset.durationDays}{"\uC77C \uB3C4\uC804"}</span>
+                <span className="mt-1 block text-xs font-semibold text-white/40">{preset.durationDays}{"\uC77C \uB3C4\uC804"} · +{missionPointsForDuration(preset.durationDays)}P / day</span>
               </button>
             ))}
           </div>
@@ -115,6 +116,7 @@ export default function MissionPanel({ mission, posts, onMissionChange }: Missio
               {isSaving ? "\uC800\uC7A5 \uC911..." : "\uC2DC\uC791\uD558\uAE30"}
             </button>
           </form>
+          <p className="mt-2 text-[11px] font-semibold text-white/35">{"\uAE30\uAC04\uC774 \uAE38\uC218\uB85D \uD558\uB8E8 \uC5C5\uB370\uC774\uD2B8 \uC810\uC218\uAC00 \uCEE4\uC838\uC694. \uD558\uB8E8 \uCCAB \uC5C5\uB370\uC774\uD2B8\uB9CC \uC810\uC218\uB97C \uBC1B\uC544\uC694."}</p>
           {error && <p className="mt-3 text-xs font-bold text-red-300">{error}</p>}
         </div>
       )}

@@ -106,7 +106,10 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
 
         <div className="relative z-10">
           <p className="text-lg font-bold leading-7 text-white drop-shadow-sm">{post.caption}</p>
-          <p className="mt-2 text-xs font-semibold text-white/70">{formatPostDate(post.createdAt)}</p>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-white/70">{formatPostDate(post.createdAt)}</p>
+            {post.scoreAwarded > 0 && <span className="rounded-full bg-[#ffd84d] px-2.5 py-1 text-[10px] font-black text-stone-950">+{post.scoreAwarded}P</span>}
+          </div>
         </div>
       </div>
       <div className="px-2 pb-2 pt-3">

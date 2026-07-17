@@ -31,6 +31,7 @@ export type DailyPost = {
   id: string;
   memberId: string;
   missionId: string | null;
+  scoreAwarded: number;
   caption: string;
   status: PostStatus;
   createdAt: string;
@@ -71,6 +72,7 @@ export type Mission = {
   userId: string;
   title: string;
   durationDays: number;
+  pointsPerUpdate: number;
   startedOn: string;
   endsOn: string;
   active: boolean;
@@ -83,6 +85,7 @@ function mapMission(row: Record<string, string | number | boolean>): Mission {
     userId: String(row.user_id),
     title: String(row.title),
     durationDays: Number(row.duration_days),
+    pointsPerUpdate: Number(row.points_per_update),
     startedOn: String(row.started_on),
     endsOn: String(row.ends_on),
     active: Boolean(row.active),
@@ -112,7 +115,7 @@ export async function createDailyPost(file: File, caption: string, status: PostS
   const { error: uploadError } = await supabase.storage.from("post-images").upload(imagePath, file, { contentType: file.type, upsert: false });
   if (uploadError) throw uploadError;
 
-  const { data, error: postError } = await supabase.from("posts").insert({ user_id: memberId, caption, status, image_path: imagePath }).select("id,user_id,mission_id,caption,status,image_path,created_at").single();
+  const { data, error: postError } = await supabase.from("posts").insert({ user_id: memberId, caption, status, image_path: imagePath }).select("id,user_id,mission_id,score_awarded,caption,status,image_path,created_at").single();
   if (postError) {
     await supabase.storage.from("post-images").remove([imagePath]);
     throw postError;
@@ -122,6 +125,7 @@ export async function createDailyPost(file: File, caption: string, status: PostS
     id: data.id,
     memberId: data.user_id,
     missionId: data.mission_id,
+    scoreAwarded: data.score_awarded,
     caption: data.caption,
     status: data.status as PostStatus,
     createdAt: data.created_at,
@@ -135,7 +139,7 @@ export async function createDailyPost(file: File, caption: string, status: PostS
 
 export async function loadDailyPosts(): Promise<DailyPost[]> {
   const supabase = createClient();
-  const { data, error } = await supabase.from("posts").select("id,user_id,mission_id,caption,status,image_path,created_at").order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("posts").select("id,user_id,mission_id,score_awarded,caption,status,image_path,created_at").order("created_at", { ascending: false });
   if (error) throw error;
   const posts = data ?? [];
   if (posts.length === 0) return [];
@@ -153,6 +157,7 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
       id: post.id,
       memberId: post.user_id,
       missionId: post.mission_id,
+      scoreAwarded: post.score_awarded ?? 0,
       caption: post.caption,
       status: (post.status ?? "working") as PostStatus,
       createdAt: post.created_at,
@@ -197,7 +202,7 @@ export function countMissionUpdateDays(posts: DailyPost[], missionId: string) {
 export async function loadActiveMission(userId: string): Promise<Mission | null> {
   const supabase = createClient();
   const { data, error } = await supabase.from("missions")
-    .select("id,user_id,title,duration_days,started_on,ends_on,active,created_at")
+    .select("id,user_id,title,duration_days,points_per_update,started_on,ends_on,active,created_at")
     .eq("user_id", userId)
     .eq("active", true)
     .order("created_at", { ascending: false })
@@ -206,6 +211,10 @@ export async function loadActiveMission(userId: string): Promise<Mission | null>
   if (error && error.code !== "PGRST205") throw error;
   if (!data || String(data.ends_on) < seoulDateKey(new Date())) return null;
   return mapMission(data);
+}
+
+export function missionPointsForDuration(durationDays: number) {
+  return Math.min(50, 5 + Math.ceil(durationDays / 7) * 5);
 }
 
 export async function setActiveMission(title: string, durationDays: number): Promise<Mission> {

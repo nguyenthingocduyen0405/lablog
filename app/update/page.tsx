@@ -70,7 +70,9 @@ export default function UpdatePage() {
       setPosts((current) => [post, ...current]);
       setPreviewUrl("");
       form.reset();
-      setMessage("\uC624\uB298\uC758 \uC5C5\uB370\uC774\uD2B8\uAC00 \uC644\uB8CC\uB410\uC5B4\uC694!");
+      setMessage(post.scoreAwarded > 0
+        ? `\uC624\uB298\uC758 \uC5C5\uB370\uC774\uD2B8 \uC644\uB8CC! +${post.scoreAwarded}P`
+        : "\uC5C5\uB370\uC774\uD2B8\uAC00 \uC800\uC7A5\uB410\uC5B4\uC694. \uC624\uB298 \uC810\uC218\uB294 \uC774\uBBF8 \uBC1B\uC558\uC5B4\uC694.");
     } catch {
       setMessage("\uC5C5\uB370\uC774\uD2B8\uB97C \uC800\uC7A5\uD558\uC9C0 \uBABB\uD588\uC5B4\uC694. \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.");
     } finally {
@@ -103,6 +105,7 @@ export default function UpdatePage() {
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-stone-400">Current mission</p>
               <p className="mt-0.5 font-black">{mission?.title ?? "\uC544\uC9C1 \uC120\uD0DD\uD55C \uBBF8\uC158\uC774 \uC5C6\uC5B4\uC694"}</p>
+              {mission && <p className="mt-1 text-xs font-bold text-violet-500">+{mission.pointsPerUpdate}P / day</p>}
             </div>
           </div>
           <div className="flex items-center gap-3">

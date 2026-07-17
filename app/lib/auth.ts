@@ -1,7 +1,7 @@
 import type { LabMember } from "./lab-social";
 import { createClient } from "./supabase/client";
 
-export type AuthUser = LabMember & { email: string };
+export type AuthUser = LabMember & { email: string; onboardingCompletedAt: string | null };
 
 const avatarBackgrounds = [
   "linear-gradient(135deg, #ffd84d, #ff8a4c)",
@@ -17,15 +17,16 @@ function makeInitials(name: string) {
   return Array.from(name.trim()).slice(0, 2).join("").toUpperCase();
 }
 
-function mapProfile(profile: Record<string, string>, email = ""): AuthUser {
+function mapProfile(profile: Record<string, string | null>, email = ""): AuthUser {
   return {
-    id: profile.id,
-    name: profile.name,
+    id: profile.id ?? "",
+    name: profile.name ?? "",
     email,
-    initials: profile.initials,
-    role: profile.role,
-    status: profile.status,
-    avatarBackground: profile.avatar_background,
+    initials: profile.initials ?? "",
+    role: profile.role ?? "",
+    status: profile.status ?? "",
+    avatarBackground: profile.avatar_background ?? "linear-gradient(135deg, #ffd84d, #ff8a4c)",
+    onboardingCompletedAt: profile.onboarding_completed_at,
   };
 }
 
@@ -58,9 +59,17 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   const supabase = createClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) return null;
-  const { data: profile, error: profileError } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background").eq("id", authData.user.id).single();
+  const { data: profile, error: profileError } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,onboarding_completed_at").eq("id", authData.user.id).single();
   if (profileError || !profile) return null;
   return mapProfile(profile, authData.user.email ?? "");
+}
+
+export async function completeOnboarding(userId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("profiles")
+    .update({ onboarding_completed_at: new Date().toISOString() })
+    .eq("id", userId);
+  if (error) throw error;
 }
 
 export async function logoutAccount() {

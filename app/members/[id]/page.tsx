@@ -48,6 +48,10 @@ export default function MemberProfilePage() {
     () => calculateCurrentStreak(localPosts, id),
     [id, localPosts],
   );
+  const totalScore = useMemo(
+    () => memberPosts.reduce((sum, post) => sum + post.scoreAwarded, 0),
+    [memberPosts],
+  );
 
   if (!currentUser) {
     return <main className="flex min-h-screen items-center justify-center bg-[#f5f3ee]"><p className="text-sm font-black text-stone-400">LABLOG \uB85C\uB529 \uC911...</p></main>;
@@ -90,6 +94,7 @@ export default function MemberProfilePage() {
             </div>
             <div className="flex gap-3">
               <div className="min-w-24 rounded-2xl bg-orange-500/20 px-5 py-4 text-center"><p className="text-2xl font-black">🔥 {currentStreak}</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">day streak</p></div>
+              <div className="min-w-24 rounded-2xl bg-violet-500/20 px-5 py-4 text-center"><p className="text-2xl font-black">{totalScore}P</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">score</p></div>
               <div className="min-w-24 rounded-2xl bg-white/10 px-5 py-4 text-center"><p className="text-2xl font-black">{memberPosts.length}</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">records</p></div>
               {isMe && <Link href="/update#new-post" className="flex items-center rounded-2xl bg-[#ffd84d] px-5 py-3 text-sm font-black text-stone-950 transition hover:-translate-y-0.5">{"\uC0C8 \uAE30\uB85D \uC62C\uB9AC\uAE30"}</Link>}
             </div>
