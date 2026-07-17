@@ -139,7 +139,8 @@ export default function Home() {
 
         <section id="new-post" className="mb-12 scroll-mt-28 overflow-hidden rounded-[2.25rem] bg-[#181611] p-4 text-white shadow-[0_24px_80px_rgba(40,32,14,0.18)] sm:p-6">
           <form onSubmit={handlePostSubmit} className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr] lg:items-center">
-            <label className="group relative block aspect-[4/3] cursor-pointer overflow-hidden rounded-[1.75rem] border-2 border-dashed border-white/20 bg-white/[0.06] transition hover:border-[#ffd84d]/70" style={previewUrl ? { backgroundImage: `url("${previewUrl}")`, backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat", backgroundColor: "#0c0a09" } : undefined}>
+            <div className="relative">
+              <label className="group relative block aspect-[4/3] cursor-pointer overflow-hidden rounded-[1.75rem] border-2 border-dashed border-white/20 bg-white/[0.06] transition hover:border-[#ffd84d]/70" style={previewUrl ? { backgroundImage: `url("${previewUrl}")`, backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat", backgroundColor: "#0c0a09" } : undefined}>
               {!previewUrl && (
                 <span className="absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#ffd84d] text-3xl text-stone-950 transition group-hover:scale-110">{"\u{1F4F7}"}</span>
@@ -148,24 +149,40 @@ export default function Home() {
                 </span>
               )}
               {previewUrl && <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-3 py-1.5 text-xs font-bold backdrop-blur">{"\uC0AC\uC9C4 \uBC14\uAFB8\uAE30"}</span>}
-              <input
-                className="sr-only"
-                name="photo"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                required
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) {
+                <input
+                  className="sr-only"
+                  name="photo"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  required
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) {
+                      setPreviewUrl("");
+                      return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = () => setPreviewUrl(String(reader.result));
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
+              {previewUrl && (
+                <button
+                  type="button"
+                  aria-label="Remove selected photo"
+                  title="Remove photo"
+                  onClick={(event) => {
+                    const input = event.currentTarget.parentElement?.querySelector<HTMLInputElement>("input[name=photo]");
+                    if (input) input.value = "";
                     setPreviewUrl("");
-                    return;
-                  }
-                  const reader = new FileReader();
-                  reader.onload = () => setPreviewUrl(String(reader.result));
-                  reader.readAsDataURL(file);
-                }}
-              />
-            </label>
+                  }}
+                  className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-2xl font-medium leading-none text-white shadow-lg backdrop-blur-md transition hover:scale-105 hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-white"
+                >
+                  {"\u00D7"}
+                </button>
+              )}
+            </div>
 
             <div className="px-1 sm:px-3">
               <div className="flex items-center gap-3">
