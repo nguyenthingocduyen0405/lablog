@@ -7,9 +7,13 @@ import DailyPostCard from "./components/daily-post-card";
 import NotificationsBell from "./components/notifications-bell";
 import { getCurrentUser, logoutAccount, type AuthUser } from "./lib/auth";
 import {
+  calculateCurrentStreak,
   createDailyPost,
+  hasPostedToday,
+  isPostStatus,
   loadDailyPosts,
   loadLabMembers,
+  POST_STATUSES,
   type DailyPost,
   type LabMember,
 } from "./lib/lab-social";
@@ -45,14 +49,24 @@ export default function Home() {
     () => [...localPosts].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
     [localPosts],
   );
+  const currentStreak = useMemo(
+    () => currentMember ? calculateCurrentStreak(localPosts, currentMember.id) : 0,
+    [currentMember, localPosts],
+  );
+  const postedToday = useMemo(
+    () => currentMember ? hasPostedToday(localPosts, currentMember.id) : false,
+    [currentMember, localPosts],
+  );
+
   async function handlePostSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
     const photo = formData.get("photo");
     const caption = String(formData.get("caption")).trim();
+    const statusValue = String(formData.get("status"));
 
-    if (!(photo instanceof File) || photo.size === 0 || !caption || !currentMember) return;
+    if (!(photo instanceof File) || photo.size === 0 || !caption || !isPostStatus(statusValue) || !currentMember) return;
     if (photo.size > 8 * 1024 * 1024) {
       setMessage("\uC0AC\uC9C4\uC740 8MB \uC774\uD558\uB85C \uC62C\uB824 \uC8FC\uC138\uC694.");
       return;
@@ -61,7 +75,7 @@ export default function Home() {
     setIsPosting(true);
     setMessage("");
     try {
-      const post = await createDailyPost(photo, caption, currentMember.id);
+      const post = await createDailyPost(photo, caption, statusValue, currentMember.id);
       setLocalPosts((current) => [post, ...current]);
       setPreviewUrl("");
       form.reset();
@@ -110,6 +124,19 @@ export default function Home() {
           <p className="max-w-sm text-sm font-medium leading-6 text-stone-500 sm:text-right">{"\uC791\uC740 \uC131\uACF5, \uB9C9\uD78C, \uC0C8\uB85C\uC6B4 \uC544\uC774\uB514\uC5B4\uAE4C\uC9C0. \uC624\uB298 \uD55C \uC77C\uC744 \uC0AC\uC9C4 \uD55C \uC7A5\uC73C\uB85C \uB0A8\uACA8 \uBCF4\uC138\uC694."}</p>
         </section>
 
+        <section className={`mb-6 flex flex-col gap-4 rounded-[1.75rem] border p-5 sm:flex-row sm:items-center sm:justify-between ${postedToday ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-[#fff9df]"}`}>
+          <div className="flex items-center gap-4">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl shadow-sm">{postedToday ? "🔥" : "⏳"}</span>
+            <div>
+              <p className="text-lg font-black">{currentStreak}일 연속 기록 중</p>
+              <p className="mt-1 text-sm font-semibold text-stone-500">
+                {postedToday ? "오늘의 기록을 완료했어요. 연속 기록이 안전해요!" : "오늘 기록을 올려 연속 기록을 이어 가세요. 오후 8시에 알림을 보내 드려요."}
+              </p>
+            </div>
+          </div>
+          {!postedToday && <a href="#new-post" className="shrink-0 rounded-full bg-stone-950 px-5 py-3 text-center text-sm font-black text-white">오늘 기록하기</a>}
+        </section>
+
         <section id="new-post" className="mb-12 scroll-mt-28 overflow-hidden rounded-[2.25rem] bg-[#181611] p-4 text-white shadow-[0_24px_80px_rgba(40,32,14,0.18)] sm:p-6">
           <form onSubmit={handlePostSubmit} className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr] lg:items-center">
             <label className="group relative block aspect-[4/3] cursor-pointer overflow-hidden rounded-[1.75rem] border-2 border-dashed border-white/20 bg-white/[0.06] transition hover:border-[#ffd84d]/70" style={previewUrl ? { backgroundImage: `url("${previewUrl}")`, backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat", backgroundColor: "#0c0a09" } : undefined}>
@@ -146,6 +173,19 @@ export default function Home() {
                 <div><p className="font-bold">{currentMember.name}</p><p className="text-xs text-white/45">{"\uC624\uB298 \uBB50 \uD588\uC5B4\uC694?"}</p></div>
               </div>
               <textarea name="caption" required maxLength={180} placeholder="오늘 해결한 문제, 배운 것, 진행한 실험을 남겨 보세요..." className="mt-5 min-h-32 w-full resize-none border-0 bg-transparent text-xl font-bold leading-8 text-white outline-none placeholder:text-white/25 sm:text-2xl" />
+              <fieldset className="mt-4">
+                <legend className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-white/45">기록 상태</legend>
+                <div className="flex flex-wrap gap-2">
+                  {POST_STATUSES.map((status) => (
+                    <label key={status.value} className="cursor-pointer">
+                      <input className="peer sr-only" type="radio" name="status" value={status.value} defaultChecked={status.value === "working"} />
+                      <span className="inline-flex rounded-full bg-white/10 px-3 py-2 text-xs font-bold text-white/65 ring-1 ring-white/10 transition hover:bg-white/15 peer-checked:bg-[#ffd84d] peer-checked:text-stone-950 peer-checked:ring-[#ffd84d]">
+                        {status.emoji} {status.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs font-medium text-white/35">{"\uAE30\uB85D\uC740 \uB0B4 \uD504\uB85C\uD544\uACFC \uB7A9 \uD53C\uB4DC\uC5D0 \uBC14\uB85C \uBCF4\uC5EC\uC694."}</p>
                 <button disabled={isPosting} type="submit" className="rounded-full bg-[#ffd84d] px-6 py-3 text-sm font-black text-stone-950 shadow-[0_5px_0_#a88400] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-60">

@@ -9,10 +9,29 @@ export type LabMember = {
   avatarBackground: string;
 };
 
+export const POST_STATUSES = [
+  { value: "studying", label: "공부 중", emoji: "📚" },
+  { value: "working", label: "진행 중", emoji: "🛠️" },
+  { value: "experimenting", label: "실험 중", emoji: "🧪" },
+  { value: "help", label: "도움 필요", emoji: "🆘" },
+  { value: "completed", label: "완료", emoji: "✅" },
+] as const;
+
+export type PostStatus = (typeof POST_STATUSES)[number]["value"];
+
+export function isPostStatus(value: string): value is PostStatus {
+  return POST_STATUSES.some((status) => status.value === value);
+}
+
+export function getPostStatus(status: PostStatus) {
+  return POST_STATUSES.find((item) => item.value === status) ?? POST_STATUSES[1];
+}
+
 export type DailyPost = {
   id: string;
   memberId: string;
   caption: string;
+  status: PostStatus;
   createdAt: string;
   imageDataUrl?: string;
   background: string;
@@ -32,11 +51,11 @@ export type PostComment = {
 
 export type LabNotification = {
   id: string;
-  type: "reaction" | "comment";
+  type: "reaction" | "comment" | "streak_reminder";
   emoji: string | null;
   commentPreview: string | null;
-  postId: string;
-  actorId: string;
+  postId: string | null;
+  actorId: string | null;
   actorName: string;
   actorInitials: string;
   actorAvatarBackground: string;
@@ -58,7 +77,7 @@ export async function loadLabMembers(): Promise<LabMember[]> {
   }));
 }
 
-export async function createDailyPost(file: File, caption: string, memberId: string) {
+export async function createDailyPost(file: File, caption: string, status: PostStatus, memberId: string) {
   const supabase = createClient();
   const rawExtension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const extension = rawExtension.replace(/[^a-z0-9]/g, "") || "jpg";
@@ -66,7 +85,7 @@ export async function createDailyPost(file: File, caption: string, memberId: str
   const { error: uploadError } = await supabase.storage.from("post-images").upload(imagePath, file, { contentType: file.type, upsert: false });
   if (uploadError) throw uploadError;
 
-  const { data, error: postError } = await supabase.from("posts").insert({ user_id: memberId, caption, image_path: imagePath }).select("id,user_id,caption,image_path,created_at").single();
+  const { data, error: postError } = await supabase.from("posts").insert({ user_id: memberId, caption, status, image_path: imagePath }).select("id,user_id,caption,status,image_path,created_at").single();
   if (postError) {
     await supabase.storage.from("post-images").remove([imagePath]);
     throw postError;
@@ -76,6 +95,7 @@ export async function createDailyPost(file: File, caption: string, memberId: str
     id: data.id,
     memberId: data.user_id,
     caption: data.caption,
+    status: data.status as PostStatus,
     createdAt: data.created_at,
     imageDataUrl: publicImage.publicUrl,
     background: "linear-gradient(145deg, #292524, #57534e)",
@@ -87,7 +107,7 @@ export async function createDailyPost(file: File, caption: string, memberId: str
 
 export async function loadDailyPosts(): Promise<DailyPost[]> {
   const supabase = createClient();
-  const { data, error } = await supabase.from("posts").select("id,user_id,caption,image_path,created_at").order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("posts").select("id,user_id,caption,status,image_path,created_at").order("created_at", { ascending: false });
   if (error) throw error;
   const posts = data ?? [];
   if (posts.length === 0) return [];
@@ -105,6 +125,7 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
       id: post.id,
       memberId: post.user_id,
       caption: post.caption,
+      status: (post.status ?? "working") as PostStatus,
       createdAt: post.created_at,
       imageDataUrl: publicImage.publicUrl,
       background: "linear-gradient(145deg, #292524, #57534e)",
@@ -122,6 +143,41 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
 
 export function formatPostDate(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+
+function seoulDateKey(value: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(value);
+}
+
+function addDays(value: Date, days: number) {
+  const result = new Date(value);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result;
+}
+
+export function hasPostedToday(posts: DailyPost[], memberId: string, now = new Date()) {
+  const today = seoulDateKey(now);
+  return posts.some((post) => post.memberId === memberId && seoulDateKey(new Date(post.createdAt)) === today);
+}
+
+export function calculateCurrentStreak(posts: DailyPost[], memberId: string, now = new Date()) {
+  const activeDays = new Set(
+    posts.filter((post) => post.memberId === memberId).map((post) => seoulDateKey(new Date(post.createdAt))),
+  );
+  let cursor = now;
+  if (!activeDays.has(seoulDateKey(cursor))) cursor = addDays(cursor, -1);
+
+  let streak = 0;
+  while (activeDays.has(seoulDateKey(cursor))) {
+    streak += 1;
+    cursor = addDays(cursor, -1);
+  }
+  return streak;
 }
 
 export async function setPostReaction(postId: string, userId: string, emoji: string | null) {
@@ -157,7 +213,7 @@ export async function loadNotifications(userId: string): Promise<LabNotification
     .limit(30);
   if (error) throw error;
   const rows = data ?? [];
-  const actorIds = [...new Set(rows.map((item) => item.actor_id))];
+  const actorIds = [...new Set(rows.map((item) => item.actor_id).filter((id): id is string => Boolean(id)))];
   const result = actorIds.length
     ? await supabase.from("profiles").select("id,name,initials,avatar_background").in("id", actorIds)
     : { data: [], error: null };
@@ -166,7 +222,7 @@ export async function loadNotifications(userId: string): Promise<LabNotification
     const actor = (result.data ?? []).find((profile) => profile.id === item.actor_id);
     return {
       id: item.id,
-      type: item.type as "reaction" | "comment",
+      type: item.type as "reaction" | "comment" | "streak_reminder",
       emoji: item.emoji,
       commentPreview: item.comment_preview,
       postId: item.post_id,
@@ -178,6 +234,12 @@ export async function loadNotifications(userId: string): Promise<LabNotification
       readAt: item.read_at,
     };
   });
+}
+
+export async function ensureDailyStreakReminder() {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("ensure_my_daily_streak_reminder");
+  if (error && error.code !== "PGRST202") throw error;
 }
 
 export async function markNotificationsRead(userId: string, notificationIds: string[]) {

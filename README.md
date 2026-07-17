@@ -7,12 +7,13 @@ A private, Locket-inspired daily photo journal for lab members. Authentication, 
 1. Create a Supabase project.
 2. Open the Supabase SQL Editor and run `supabase/migrations/20260716000000_lablog_schema.sql`.
 3. Run `supabase/migrations/20260717000000_social_interactions.sql` in the same SQL Editor.
-4. Copy `.env.example` to `.env.local`.
-5. In Supabase Project Settings > API, copy the Project URL and Publishable key into `.env.local`.
-6. In Authentication > URL Configuration, set the Site URL to `http://localhost:3000` for local development.
-7. Run `npm run dev`.
+4. Run `supabase/migrations/20260718000000_post_status_and_streaks.sql` to add post statuses, streak reminders, and the daily 20:00 Asia/Seoul reminder schedule.
+5. Copy `.env.example` to `.env.local`.
+6. In Supabase Project Settings > API, copy the Project URL and Publishable key into `.env.local`.
+7. In Authentication > URL Configuration, set the Site URL to `http://localhost:3000` for local development.
+8. Run `npm run dev`.
 
-The migrations create profiles, posts, reactions, comments, notifications, an Auth signup trigger, and the public `post-images` Storage bucket. Row Level Security keeps writes tied to the signed-in member and notifications private to their recipient.
+The migrations create profiles, posts, reactions, comments, notifications, daily streak reminders, an Auth signup trigger, and the public `post-images` Storage bucket. Row Level Security keeps writes tied to the signed-in member and notifications private to their recipient.
 
 ## Environment variables
 

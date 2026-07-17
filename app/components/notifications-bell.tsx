@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { formatPostDate, loadNotifications, markNotificationsRead, type LabNotification } from "../lib/lab-social";
+import { ensureDailyStreakReminder, formatPostDate, loadNotifications, markNotificationsRead, type LabNotification } from "../lib/lab-social";
 
 export default function NotificationsBell({ userId }: { userId: string }) {
   const [notifications, setNotifications] = useState<LabNotification[]>([]);
@@ -10,11 +10,13 @@ export default function NotificationsBell({ userId }: { userId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    const refresh = () => loadNotifications(userId).then((items) => {
+    const refresh = async () => {
+      await ensureDailyStreakReminder().catch(() => undefined);
+      const items = await loadNotifications(userId);
       if (!cancelled) setNotifications(items);
-    }).catch(() => undefined);
+    };
     refresh();
-    const interval = window.setInterval(refresh, 30000);
+    const interval = window.setInterval(() => refresh().catch(() => undefined), 30000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
@@ -52,11 +54,16 @@ export default function NotificationsBell({ userId }: { userId: string }) {
                 <p className="mt-3 text-sm font-bold text-stone-400">{"\uC544\uC9C1 \uC0C8 \uC54C\uB9BC\uC774 \uC5C6\uC5B4\uC694."}</p>
               </div>
             ) : notifications.map((item) => (
-              <Link key={item.id} href={`/#post-${item.postId}`} onClick={() => setIsOpen(false)} className="flex gap-3 border-b border-stone-100 px-4 py-4 transition last:border-0 hover:bg-[#fff9df]">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[10px] font-black" style={{ background: item.actorAvatarBackground }}>{item.actorInitials}</span>
+              <Link key={item.id} href={item.type === "streak_reminder" ? "/#new-post" : `/#post-${item.postId}`} onClick={() => setIsOpen(false)} className="flex gap-3 border-b border-stone-100 px-4 py-4 transition last:border-0 hover:bg-[#fff9df]">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[10px] font-black" style={item.type === "streak_reminder" ? { background: "#ffd84d", fontSize: "1.25rem" } : { background: item.actorAvatarBackground }}>
+                  {item.type === "streak_reminder" ? "🔥" : item.actorInitials}
+                </span>
                 <span className="min-w-0 text-sm leading-5">
-                  <span className="font-black">{item.actorName}</span>
-                  {item.type === "reaction" ? `\uB2D8\uC774 \uB0B4 \uAE30\uB85D\uC5D0 ${item.emoji ?? "\uD83D\uDC4F"} \uBC18\uC751\uC744 \uB0A8\uACBC\uC5B4\uC694.` : "\uB2D8\uC774 \uB0B4 \uAE30\uB85D\uC5D0 \uB313\uAE00\uC744 \uB0A8\uACBC\uC5B4\uC694."}
+                  {item.type === "streak_reminder" ? (
+                    <><span className="font-black">연속 기록이 곧 끊겨요!</span><span className="block text-stone-600">오늘의 기록을 올려 스트릭을 지켜 주세요.</span></>
+                  ) : (
+                    <><span className="font-black">{item.actorName}</span>{item.type === "reaction" ? `\uB2D8\uC774 \uB0B4 \uAE30\uB85D\uC5D0 ${item.emoji ?? "\uD83D\uDC4F"} \uBC18\uC751\uC744 \uB0A8\uACBC\uC5B4\uC694.` : "\uB2D8\uC774 \uB0B4 \uAE30\uB85D\uC5D0 \uB313\uAE00\uC744 \uB0A8\uACBC\uC5B4\uC694."}</>
+                  )}
                   {item.commentPreview && <span className="mt-1 block truncate text-xs font-medium text-stone-400">&quot;{item.commentPreview}&quot;</span>}
                   <span className="mt-1 block text-[11px] font-semibold text-stone-300">{formatPostDate(item.createdAt)}</span>
                 </span>

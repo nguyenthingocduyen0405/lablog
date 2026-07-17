@@ -7,6 +7,7 @@ import DailyPostCard from "../../components/daily-post-card";
 import NotificationsBell from "../../components/notifications-bell";
 import { getCurrentUser, logoutAccount, type AuthUser } from "../../lib/auth";
 import {
+  calculateCurrentStreak,
   loadDailyPosts,
   loadLabMembers,
   type DailyPost,
@@ -41,6 +42,10 @@ export default function MemberProfilePage() {
     () => [...localPosts]
       .filter((post) => post.memberId === id)
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    [id, localPosts],
+  );
+  const currentStreak = useMemo(
+    () => calculateCurrentStreak(localPosts, id),
     [id, localPosts],
   );
 
@@ -84,6 +89,7 @@ export default function MemberProfilePage() {
               </div>
             </div>
             <div className="flex gap-3">
+              <div className="min-w-24 rounded-2xl bg-orange-500/20 px-5 py-4 text-center"><p className="text-2xl font-black">🔥 {currentStreak}</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">day streak</p></div>
               <div className="min-w-24 rounded-2xl bg-white/10 px-5 py-4 text-center"><p className="text-2xl font-black">{memberPosts.length}</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">records</p></div>
               {isMe && <Link href="/#new-post" className="flex items-center rounded-2xl bg-[#ffd84d] px-5 py-3 text-sm font-black text-stone-950 transition hover:-translate-y-0.5">{"\uC0C8 \uAE30\uB85D \uC62C\uB9AC\uAE30"}</Link>}
             </div>
