@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import DailyPostCard from "./components/daily-post-card";
+import MissionPanel from "./components/mission-panel";
 import NotificationsBell from "./components/notifications-bell";
 import { getCurrentUser, logoutAccount, type AuthUser } from "./lib/auth";
 import {
@@ -11,11 +12,13 @@ import {
   createDailyPost,
   hasPostedToday,
   isPostStatus,
+  loadActiveMission,
   loadDailyPosts,
   loadLabMembers,
   POST_STATUSES,
   type DailyPost,
   type LabMember,
+  type Mission,
 } from "./lib/lab-social";
 
 export default function Home() {
@@ -23,6 +26,7 @@ export default function Home() {
   const [localPosts, setLocalPosts] = useState<DailyPost[]>([]);
   const [currentMember, setCurrentMember] = useState<AuthUser | null>(null);
   const [members, setMembers] = useState<LabMember[]>([]);
+  const [activeMission, setActiveMissionState] = useState<Mission | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [message, setMessage] = useState("");
@@ -35,11 +39,16 @@ export default function Home() {
           router.replace("/login");
           return;
         }
-        const [loadedMembers, loadedPosts] = await Promise.all([loadLabMembers(), loadDailyPosts()]);
+        const [loadedMembers, loadedPosts, loadedMission] = await Promise.all([
+          loadLabMembers(),
+          loadDailyPosts(),
+          loadActiveMission(user.id),
+        ]);
         if (cancelled) return;
         setCurrentMember(user);
         setMembers(loadedMembers);
         setLocalPosts(loadedPosts);
+        setActiveMissionState(loadedMission);
       })
       .catch(() => setMessage("Supabase \uC5F0\uACB0\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."));
     return () => { cancelled = true; };
@@ -123,6 +132,8 @@ export default function Home() {
           </div>
           <p className="max-w-sm text-sm font-medium leading-6 text-stone-500 sm:text-right">{"\uC791\uC740 \uC131\uACF5, \uB9C9\uD78C, \uC0C8\uB85C\uC6B4 \uC544\uC774\uB514\uC5B4\uAE4C\uC9C0. \uC624\uB298 \uD55C \uC77C\uC744 \uC0AC\uC9C4 \uD55C \uC7A5\uC73C\uB85C \uB0A8\uACA8 \uBCF4\uC138\uC694."}</p>
         </section>
+
+        <MissionPanel mission={activeMission} posts={localPosts} onMissionChange={setActiveMissionState} />
 
         <section className={`mb-6 flex flex-col gap-4 rounded-[1.75rem] border p-5 sm:flex-row sm:items-center sm:justify-between ${postedToday ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-[#fff9df]"}`}>
           <div className="flex items-center gap-4">
