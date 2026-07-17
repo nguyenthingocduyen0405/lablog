@@ -21,3 +21,29 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+@keyframes lab-character-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-4px) rotate(1deg); }
+}
+
+@keyframes lab-character-wave {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  35% { transform: translateY(-8px) rotate(6deg); }
+  65% { transform: translateY(-5px) rotate(-5deg); }
+}
+
+.lab-character-float {
+  animation: lab-character-float 3s ease-in-out infinite;
+}
+
+.lab-character-wave {
+  animation: lab-character-wave .8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-character-float,
+  .lab-character-wave {
+    animation: none;
+  }
+}

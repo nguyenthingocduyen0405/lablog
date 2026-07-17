@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { completeOnboarding, getCurrentUser, logoutAccount, type AuthUser } from "./lib/auth";
+import { getCurrentUser, logoutAccount, type AuthUser } from "./lib/auth";
 import { loadActiveMission } from "./lib/lab-social";
 import CharacterAvatar from "./components/character-avatar";
 
@@ -51,12 +51,7 @@ export default function ReadyPage() {
   async function startOnboarding() {
     if (!user || isStarting) return;
     setIsStarting(true);
-    try {
-      await completeOnboarding(user.id);
-      router.push("/mission");
-    } finally {
-      setIsStarting(false);
-    }
+    router.push("/lab-tour");
   }
 
   if (!user) {
@@ -83,7 +78,7 @@ export default function ReadyPage() {
         <p className="mt-12 text-sm font-black tracking-[0.14em] text-violet-500">OS Lab{"\uC5D0 \uC628 \uAC78 \uD658\uC601\uD574"}</p>
         <h1 className="mt-4 text-6xl font-black tracking-[-0.075em] sm:text-8xl">{"\uC900\uBE44\uB410\uC5B4?"}</h1>
         <button type="button" disabled={isStarting} onClick={startOnboarding} className="group mt-10 inline-flex items-center gap-5 rounded-full bg-[#191812] py-3 pl-8 pr-3 text-lg font-black text-white shadow-[0_8px_0_#d8b300] transition hover:-translate-y-1 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-60">
-          {isStarting ? "\uC900\uBE44 \uC911..." : "\uC2DC\uC791\uD558\uAE30"}
+          {isStarting ? "\uC900\uBE44 \uC911..." : "\uB7A9 \uD22C\uC5B4 \uC2DC\uC791"}
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#ffd84d] text-xl text-[#191812] transition group-hover:translate-x-1">{"\u2192"}</span>
         </button>
       </section>
