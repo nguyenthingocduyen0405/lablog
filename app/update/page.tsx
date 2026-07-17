@@ -12,16 +12,19 @@ import {
   createDailyPost,
   getMemberAvailability,
   hasPostedToday,
+  isMomentCategory,
   isPostStatus,
   loadActiveMissions,
   loadCalendarEvents,
   loadDailyPosts,
   loadLabMembers,
+  MOMENT_CATEGORIES,
   POST_STATUSES,
   type CalendarEvent,
   type DailyPost,
   type LabMember,
   type Mission,
+  type PostKind,
 } from "../lib/lab-social";
 
 export default function UpdatePage() {
@@ -34,6 +37,8 @@ export default function UpdatePage() {
   const [previewUrl, setPreviewUrl] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [message, setMessage] = useState("");
+  const [postKind, setPostKind] = useState<PostKind>("work");
+  const [feedFilter, setFeedFilter] = useState<"all" | PostKind>("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -61,8 +66,10 @@ export default function UpdatePage() {
   const currentStreak = useMemo(() => user ? calculateCurrentStreak(posts, user.id) : 0, [posts, user]);
   const postedToday = useMemo(() => user ? hasPostedToday(posts, user.id) : false, [posts, user]);
   const sortedPosts = useMemo(
-    () => [...posts].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
-    [posts],
+    () => posts
+      .filter((post) => feedFilter === "all" || post.kind === feedFilter)
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    [feedFilter, posts],
   );
 
   async function submitUpdate(event: FormEvent<HTMLFormElement>) {
@@ -71,10 +78,13 @@ export default function UpdatePage() {
     const data = new FormData(form);
     const photo = data.get("photo");
     const caption = String(data.get("caption")).trim();
-    const statusValue = String(data.get("status"));
-    const missionId = String(data.get("missionId") ?? "") || null;
+    const kind: PostKind = String(data.get("postKind")) === "moment" ? "moment" : "work";
+    const momentCategoryValue = String(data.get("momentCategory") ?? "daily");
+    const momentCategory = kind === "moment" && isMomentCategory(momentCategoryValue) ? momentCategoryValue : null;
+    const statusValue = kind === "moment" ? "working" : String(data.get("status"));
+    const missionId = kind === "work" ? String(data.get("missionId") ?? "") || null : null;
     if (!(photo instanceof File) || photo.size === 0 || !caption || !isPostStatus(statusValue) || !user) return;
-    if (missions.length > 0 && !missions.some((mission) => mission.id === missionId)) {
+    if (kind === "work" && missions.length > 0 && !missions.some((mission) => mission.id === missionId)) {
       setMessage("이 업데이트가 어떤 미션의 기록인지 선택해 주세요.");
       return;
     }
@@ -86,13 +96,15 @@ export default function UpdatePage() {
     setIsPosting(true);
     setMessage("");
     try {
-      const post = await createDailyPost(photo, caption, statusValue, user.id, missionId);
+      const post = await createDailyPost(photo, caption, statusValue, kind, momentCategory, user.id, missionId);
       setPosts((current) => [post, ...current]);
       setPreviewUrl("");
       form.reset();
-      setMessage(post.scoreAwarded > 0
-        ? `\uC624\uB298\uC758 \uC5C5\uB370\uC774\uD2B8 \uC644\uB8CC! +${post.scoreAwarded}P`
-        : "\uC5C5\uB370\uC774\uD2B8\uAC00 \uC800\uC7A5\uB410\uC5B4\uC694. \uC624\uB298 \uC810\uC218\uB294 \uC774\uBBF8 \uBC1B\uC558\uC5B4\uC694.");
+      setMessage(kind === "moment"
+        ? "Lab Moment를 공유했어요. 점수와 스트릭에는 영향을 주지 않아요."
+        : post.scoreAwarded > 0
+          ? `오늘의 업데이트 완료! +${post.scoreAwarded}P`
+          : "업데이트가 저장됐어요. 오늘 점수는 이미 받았어요.");
     } catch {
       setMessage("\uC5C5\uB370\uC774\uD2B8\uB97C \uC800\uC7A5\uD558\uC9C0 \uBABB\uD588\uC5B4\uC694. \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.");
     } finally {
@@ -153,7 +165,17 @@ export default function UpdatePage() {
 
             <div className="px-1 sm:px-3">
               <div className="flex items-center gap-3"><CharacterAvatar config={user.avatarConfig} background={user.avatarBackground} name={user.name} size={44} /><div><p className="font-bold">{user.name}</p><p className="text-xs text-white/45">{"\uC624\uB298 \uBB50 \uD588\uC5B4\uC694?"}</p></div></div>
-              <textarea name="caption" required maxLength={180} placeholder={"\uBC30\uC6B4 \uAC83, \uC9C4\uD589\uD55C \uAC83, \uB9C9\uD78C \uC810\uC744 \uB0A8\uACA8 \uBCF4\uC138\uC694..."} className="mt-5 min-h-32 w-full resize-none border-0 bg-transparent text-xl font-bold leading-8 text-white outline-none placeholder:text-white/25 sm:text-2xl" />
+              <input type="hidden" name="postKind" value={postKind} />
+              <div className="mt-5 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-1.5 ring-1 ring-white/10">
+                <button type="button" onClick={() => { setPostKind("work"); setMessage(""); }} className={`rounded-xl px-4 py-3 text-left transition ${postKind === "work" ? "bg-[#ffd84d] text-stone-950" : "text-white/55 hover:bg-white/10"}`}>
+                  <span className="block text-sm font-black">🛠️ Work Update</span><span className="mt-0.5 block text-[10px] font-bold opacity-60">미션 · 점수 · 스트릭</span>
+                </button>
+                <button type="button" onClick={() => { setPostKind("moment"); setMessage(""); }} className={`rounded-xl px-4 py-3 text-left transition ${postKind === "moment" ? "bg-emerald-300 text-emerald-950" : "text-white/55 hover:bg-white/10"}`}>
+                  <span className="block text-sm font-black">🌿 Lab Moment</span><span className="mt-0.5 block text-[10px] font-bold opacity-60">일상 · 여행 · 휴식</span>
+                </button>
+              </div>
+              <textarea name="caption" required maxLength={180} placeholder={postKind === "moment" ? "여행, 맛있는 음식, 오늘의 작은 순간을 공유해 보세요..." : "배운 것, 진행한 것, 막힌 점을 남겨 보세요..."} className="mt-5 min-h-32 w-full resize-none border-0 bg-transparent text-xl font-bold leading-8 text-white outline-none placeholder:text-white/25 sm:text-2xl" />
+              <div className={postKind === "work" ? "contents" : "hidden"}>
               {missions.length > 0 ? (
                 <fieldset className="mt-4">
                   <legend className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-white/45">어떤 미션의 기록인가요?</legend>
@@ -163,7 +185,9 @@ export default function UpdatePage() {
                 <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-white/[0.06] px-4 py-3"><p className="text-xs font-bold text-white/45">미션 없이 일반 기록으로 저장돼요.</p><Link href="/mission" className="shrink-0 text-xs font-black text-[#ffd84d]">미션 추가 →</Link></div>
               )}
               <fieldset className="mt-4"><legend className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-white/45">{"\uAE30\uB85D \uC0C1\uD0DC"}</legend><div className="flex flex-wrap gap-2">{POST_STATUSES.map((status) => <label key={status.value} className="cursor-pointer"><input className="peer sr-only" type="radio" name="status" value={status.value} defaultChecked={status.value === "working"} /><span className="inline-flex rounded-full bg-white/10 px-3 py-2 text-xs font-bold text-white/65 ring-1 ring-white/10 transition peer-checked:bg-[#ffd84d] peer-checked:text-stone-950">{status.emoji} {status.label}</span></label>)}</div></fieldset>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs font-medium text-white/35">{"\uAE30\uB85D\uC740 \uBBF8\uC158\uACFC \uD53C\uB4DC\uC5D0 \uBC14\uB85C \uBC18\uC601\uB3FC\uC694."}</p><button disabled={isPosting} type="submit" className="rounded-full bg-[#ffd84d] px-6 py-3 text-sm font-black text-stone-950 shadow-[0_5px_0_#a88400] transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-none disabled:opacity-50">{isPosting ? "\uC62C\uB9AC\uB294 \uC911..." : "\uC624\uB298 \uC5C5\uB370\uC774\uD2B8"}</button></div>
+              </div>
+              {postKind === "moment" && <fieldset className="mt-4 rounded-2xl bg-emerald-300/10 px-4 py-3 ring-1 ring-emerald-300/20"><legend className="px-1 text-xs font-black text-emerald-200">어떤 순간인가요?</legend><div className="mt-2 flex flex-wrap gap-2">{MOMENT_CATEGORIES.map((category) => <label key={category.value} className="cursor-pointer"><input className="peer sr-only" type="radio" name="momentCategory" value={category.value} defaultChecked={category.value === "daily"} /><span className="inline-flex rounded-full bg-white/10 px-3 py-2 text-xs font-bold text-white/60 ring-1 ring-white/10 transition peer-checked:bg-emerald-300 peer-checked:text-emerald-950">{category.emoji} {category.label}</span></label>)}</div><p className="mt-3 text-[11px] font-semibold leading-5 text-white/40">미션과 연결되지 않으며 점수와 스트릭에 영향을 주지 않아요.</p></fieldset>}
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs font-medium text-white/35">{postKind === "moment" ? "Lab 멤버들과 일상의 순간을 나눠 보세요." : "기록은 미션과 피드에 바로 반영돼요."}</p><button disabled={isPosting} type="submit" className={`rounded-full px-6 py-3 text-sm font-black text-stone-950 transition hover:-translate-y-0.5 active:translate-y-1 active:shadow-none disabled:opacity-50 ${postKind === "moment" ? "bg-emerald-300 shadow-[0_5px_0_#367b62]" : "bg-[#ffd84d] shadow-[0_5px_0_#a88400]"}`}>{isPosting ? "올리는 중..." : postKind === "moment" ? "Moment 공유하기" : "오늘 업데이트"}</button></div>
               {message && <p className="mt-4 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-[#ffe785]">{message}</p>}
             </div>
           </form>
@@ -175,7 +199,10 @@ export default function UpdatePage() {
               <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-500">Team feed</p>
               <h2 className="mt-2 text-3xl font-black tracking-[-0.045em] sm:text-5xl">{"\uC6B0\uB9AC\uC758 \uC624\uB298"}</h2>
             </div>
-            <Link href="/mission" className="w-fit rounded-full bg-white px-4 py-2 text-xs font-black text-stone-500 shadow-sm ring-1 ring-black/[0.06] hover:text-stone-950">{"\uBBF8\uC158 \uD655\uC778"}</Link>
+            <div className="flex flex-wrap items-center gap-2">
+              {([{"value":"all","label":"전체"},{"value":"work","label":"Work"},{"value":"moment","label":"Lab Life"}] as const).map((filter) => <button key={filter.value} type="button" onClick={() => setFeedFilter(filter.value)} className={`rounded-full px-4 py-2 text-xs font-black transition ${feedFilter === filter.value ? filter.value === "moment" ? "bg-emerald-300 text-emerald-950" : "bg-stone-950 text-white" : "bg-white text-stone-500 shadow-sm ring-1 ring-black/[0.06] hover:text-stone-950"}`}>{filter.label}</button>)}
+              <Link href="/mission" className="rounded-full bg-white px-4 py-2 text-xs font-black text-stone-500 shadow-sm ring-1 ring-black/[0.06] hover:text-stone-950">미션 확인</Link>
+            </div>
           </div>
 
           <div id="team" className="mb-9 flex scroll-mt-24 gap-3 overflow-x-auto pb-2">

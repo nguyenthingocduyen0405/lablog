@@ -55,6 +55,21 @@ export const POST_STATUSES = [
 ] as const;
 
 export type PostStatus = (typeof POST_STATUSES)[number]["value"];
+export type PostKind = "work" | "moment";
+
+export const MOMENT_CATEGORIES = [
+  { value: "daily", label: "일상", emoji: "🌿" },
+  { value: "travel", label: "여행", emoji: "✈️" },
+  { value: "food", label: "맛집", emoji: "🍜" },
+  { value: "rest", label: "휴식", emoji: "☕" },
+  { value: "event", label: "함께", emoji: "🎉" },
+] as const;
+
+export type MomentCategory = (typeof MOMENT_CATEGORIES)[number]["value"];
+
+export function isMomentCategory(value: string): value is MomentCategory {
+  return MOMENT_CATEGORIES.some((category) => category.value === value);
+}
 
 export function isPostStatus(value: string): value is PostStatus {
   return POST_STATUSES.some((status) => status.value === value);
@@ -67,6 +82,8 @@ export function getPostStatus(status: PostStatus) {
 export type DailyPost = {
   id: string;
   memberId: string;
+  kind: PostKind;
+  momentCategory: MomentCategory | null;
   missionId: string | null;
   missionTitle: string | null;
   scoreAwarded: number;
@@ -288,6 +305,8 @@ export async function createDailyPost(
   file: File,
   caption: string,
   status: PostStatus,
+  kind: PostKind,
+  momentCategory: MomentCategory | null,
   memberId: string,
   missionId: string | null,
 ) {
@@ -300,11 +319,13 @@ export async function createDailyPost(
 
   const { data, error: postError } = await supabase.from("posts").insert({
     user_id: memberId,
+    post_kind: kind,
+    moment_category: kind === "moment" ? momentCategory : null,
     mission_id: missionId,
     caption,
     status,
     image_path: imagePath,
-  }).select("id,user_id,mission_id,mission_title,score_awarded,caption,status,image_path,created_at").single();
+  }).select("id,user_id,post_kind,moment_category,mission_id,mission_title,score_awarded,caption,status,image_path,created_at").single();
   if (postError) {
     await supabase.storage.from("post-images").remove([imagePath]);
     throw postError;
@@ -314,6 +335,8 @@ export async function createDailyPost(
   return {
     id: data.id,
     memberId: data.user_id,
+    kind: data.post_kind as PostKind,
+    momentCategory: data.moment_category as MomentCategory | null,
     missionId: data.mission_id,
     missionTitle: data.mission_title,
     scoreAwarded: data.score_awarded,
@@ -332,7 +355,7 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
   const cached = validCache(dailyPostsCache);
   if (cached) return cached;
   const supabase = createClient();
-  const { data, error } = await supabase.from("posts").select("id,user_id,mission_id,mission_title,score_awarded,caption,status,image_path,created_at").order("created_at", { ascending: false });
+  const { data, error } = await supabase.from("posts").select("id,user_id,post_kind,moment_category,mission_id,mission_title,score_awarded,caption,status,image_path,created_at").order("created_at", { ascending: false });
   if (error) throw error;
   const posts = data ?? [];
   if (posts.length === 0) return [];
@@ -349,6 +372,8 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
     return {
       id: post.id,
       memberId: post.user_id,
+      kind: (post.post_kind ?? "work") as PostKind,
+      momentCategory: post.moment_category as MomentCategory | null,
       missionId: post.mission_id,
       missionTitle: post.mission_title,
       scoreAwarded: post.score_awarded ?? 0,
@@ -378,6 +403,7 @@ export async function loadMissionActivity(userId: string): Promise<MissionActivi
   const { data, error } = await supabase.from("posts")
     .select("mission_id,created_at")
     .eq("user_id", userId)
+    .eq("post_kind", "work")
     .order("created_at", { ascending: false });
   if (error) throw error;
   const activity = (data ?? []).map((post) => ({ missionId: post.mission_id, createdAt: post.created_at }));
@@ -390,7 +416,7 @@ export async function loadCalendarPosts(userId: string): Promise<DailyPost[]> {
   if (cached) return cached;
   const supabase = createClient();
   const { data, error } = await supabase.from("posts")
-    .select("id,user_id,mission_id,mission_title,score_awarded,caption,status,image_path,created_at")
+    .select("id,user_id,post_kind,moment_category,mission_id,mission_title,score_awarded,caption,status,image_path,created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -399,6 +425,8 @@ export async function loadCalendarPosts(userId: string): Promise<DailyPost[]> {
     return {
       id: post.id,
       memberId: post.user_id,
+      kind: (post.post_kind ?? "work") as PostKind,
+      momentCategory: post.moment_category as MomentCategory | null,
       missionId: post.mission_id,
       missionTitle: post.mission_title,
       scoreAwarded: post.score_awarded ?? 0,
@@ -491,12 +519,12 @@ function addDays(value: Date, days: number) {
 
 export function hasPostedToday(posts: DailyPost[], memberId: string, now = new Date()) {
   const today = seoulDateKey(now);
-  return posts.some((post) => post.memberId === memberId && seoulDateKey(new Date(post.createdAt)) === today);
+  return posts.some((post) => post.kind === "work" && post.memberId === memberId && seoulDateKey(new Date(post.createdAt)) === today);
 }
 
 export function calculateCurrentStreak(posts: DailyPost[], memberId: string, now = new Date()) {
   const activeDays = new Set(
-    posts.filter((post) => post.memberId === memberId).map((post) => seoulDateKey(new Date(post.createdAt))),
+    posts.filter((post) => post.kind === "work" && post.memberId === memberId).map((post) => seoulDateKey(new Date(post.createdAt))),
   );
   let cursor = now;
   if (!activeDays.has(seoulDateKey(cursor))) cursor = addDays(cursor, -1);

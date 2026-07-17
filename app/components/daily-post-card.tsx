@@ -8,6 +8,7 @@ import {
   DEFAULT_AVATAR_CONFIG,
   formatPostDate,
   getPostStatus,
+  MOMENT_CATEGORIES,
   setPostReaction,
   type DailyPost,
   type LabMember,
@@ -25,6 +26,7 @@ const reactionOptions = ["👏", "🔥", "💡", "❤️"];
 export default function DailyPostCard({ post, member, currentUserId, members }: DailyPostCardProps) {
   const imageStyle = post.imageDataUrl ? { backgroundImage: `url("${post.imageDataUrl}")` } : undefined;
   const postStatus = getPostStatus(post.status);
+  const momentCategory = MOMENT_CATEGORIES.find((category) => category.value === post.momentCategory) ?? MOMENT_CATEGORIES[0];
   const [reactions, setReactions] = useState(post.reactions);
   const [comments, setComments] = useState(post.comments);
   const [showComments, setShowComments] = useState(false);
@@ -99,10 +101,10 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
             <span className="text-sm font-bold">{member.name}</span>
           </Link>
           <div className="flex min-w-0 max-w-[68%] flex-col items-end gap-2">
-            <span className={`shrink-0 rounded-full px-3 py-2 text-xs font-black backdrop-blur-md ${post.status === "help" ? "bg-red-500 text-white" : "bg-white/90 text-stone-950"}`}>
-              {postStatus.emoji} {postStatus.label}
+            <span className={`shrink-0 rounded-full px-3 py-2 text-xs font-black backdrop-blur-md ${post.kind === "moment" ? "bg-emerald-300/95 text-emerald-950" : post.status === "help" ? "bg-red-500 text-white" : "bg-white/90 text-stone-950"}`}>
+              {post.kind === "moment" ? `${momentCategory.emoji} ${momentCategory.label}` : `${postStatus.emoji} ${postStatus.label}`}
             </span>
-            {post.missionTitle && (
+            {post.kind === "work" && post.missionTitle && (
               <span className="max-w-full truncate rounded-full bg-violet-300/95 px-3 py-1.5 text-[10px] font-black text-violet-950 shadow-sm backdrop-blur">
                 🎯 {post.missionTitle}
               </span>
