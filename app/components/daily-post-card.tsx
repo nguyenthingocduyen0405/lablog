@@ -91,23 +91,24 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
         {post.imageDataUrl && (
           <button type="button" aria-label="View larger photo" onClick={() => setIsImageOpen(true)} className="absolute inset-0 z-[5] cursor-pointer" />
         )}
-        <div className="relative z-10 flex items-center justify-between gap-2">
+        <div className="relative z-10 flex items-start justify-between gap-2">
           <Link href={`/members/${member.id}`} className="flex w-fit items-center gap-2 rounded-full bg-black/25 py-1.5 pl-1.5 pr-3 backdrop-blur-md transition hover:bg-black/40">
             <span className="flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-black text-stone-900" style={{ background: member.avatarBackground }}>
               {member.initials}
             </span>
             <span className="text-sm font-bold">{member.name}</span>
           </Link>
-          <span className={`rounded-full px-3 py-2 text-xs font-black backdrop-blur-md ${post.status === "help" ? "bg-red-500 text-white" : "bg-white/90 text-stone-950"}`}>
-            {postStatus.emoji} {postStatus.label}
-          </span>
-        </div>
-
-        {post.missionTitle && (
-          <div className="relative z-10 mt-3 w-fit max-w-full rounded-full bg-violet-300/95 px-3 py-1.5 text-[10px] font-black text-violet-950 shadow-sm backdrop-blur">
-            <span className="block truncate">🎯 {post.missionTitle}</span>
+          <div className="flex min-w-0 max-w-[68%] flex-col items-end gap-2">
+            <span className={`shrink-0 rounded-full px-3 py-2 text-xs font-black backdrop-blur-md ${post.status === "help" ? "bg-red-500 text-white" : "bg-white/90 text-stone-950"}`}>
+              {postStatus.emoji} {postStatus.label}
+            </span>
+            {post.missionTitle && (
+              <span className="max-w-full truncate rounded-full bg-violet-300/95 px-3 py-1.5 text-[10px] font-black text-violet-950 shadow-sm backdrop-blur">
+                🎯 {post.missionTitle}
+              </span>
+            )}
           </div>
-        )}
+        </div>
 
         {!post.imageDataUrl && (
           <div className="relative z-10 flex flex-1 items-center justify-center text-7xl drop-shadow-lg transition duration-300 group-hover:scale-110">
