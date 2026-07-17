@@ -72,7 +72,7 @@ export default function MissionPanel({ mission, posts, onMissionChange }: Missio
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <a href="#new-post" className={`rounded-full px-4 py-2.5 text-xs font-black ${updatedToday ? "bg-emerald-400 text-emerald-950" : "bg-[#ffd84d] text-stone-950"}`}>
+              <a href="/update#new-post" className={`rounded-full px-4 py-2.5 text-xs font-black ${updatedToday ? "bg-emerald-400 text-emerald-950" : "bg-[#ffd84d] text-stone-950"}`}>
                 {updatedToday ? "\uC624\uB298 \uC5C5\uB370\uC774\uD2B8 \uC644\uB8CC" : "\uC624\uB298 \uC5C5\uB370\uC774\uD2B8\uD558\uAE30"}
               </a>
               <button type="button" onClick={() => setShowChooser((current) => !current)} className="rounded-full bg-white/10 px-4 py-2.5 text-xs font-black text-white/70 hover:bg-white/15">

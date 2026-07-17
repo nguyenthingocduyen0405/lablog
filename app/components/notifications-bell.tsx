@@ -54,7 +54,7 @@ export default function NotificationsBell({ userId }: { userId: string }) {
                 <p className="mt-3 text-sm font-bold text-stone-400">{"\uC544\uC9C1 \uC0C8 \uC54C\uB9BC\uC774 \uC5C6\uC5B4\uC694."}</p>
               </div>
             ) : notifications.map((item) => (
-              <Link key={item.id} href={item.type.endsWith("_reminder") ? "/#new-post" : `/#post-${item.postId}`} onClick={() => setIsOpen(false)} className="flex gap-3 border-b border-stone-100 px-4 py-4 transition last:border-0 hover:bg-[#fff9df]">
+              <Link key={item.id} href={item.type.endsWith("_reminder") ? "/update#new-post" : `/feed#post-${item.postId}`} onClick={() => setIsOpen(false)} className="flex gap-3 border-b border-stone-100 px-4 py-4 transition last:border-0 hover:bg-[#fff9df]">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[10px] font-black" style={item.type.endsWith("_reminder") ? { background: "#ffd84d", fontSize: "1.25rem" } : { background: item.actorAvatarBackground }}>
                   {item.type === "streak_reminder" ? "🔥" : item.actorInitials}
                 </span>

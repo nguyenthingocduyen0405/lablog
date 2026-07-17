@@ -1,0 +1,69 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import AppHeader from "../components/app-header";
+import MissionPanel from "../components/mission-panel";
+import { getCurrentUser, type AuthUser } from "../lib/auth";
+import { loadActiveMission, loadDailyPosts, type DailyPost, type Mission } from "../lib/lab-social";
+
+export default function MissionPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [mission, setMission] = useState<Mission | null>(null);
+  const [posts, setPosts] = useState<DailyPost[]>([]);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentUser().then(async (currentUser) => {
+      if (!currentUser) {
+        router.replace("/login");
+        return;
+      }
+      const [activeMission, loadedPosts] = await Promise.all([
+        loadActiveMission(currentUser.id),
+        loadDailyPosts(),
+      ]);
+      if (cancelled) return;
+      setUser(currentUser);
+      setMission(activeMission);
+      setPosts(loadedPosts);
+    }).catch(() => setMessage("Supabase \uC5F0\uACB0\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."));
+    return () => { cancelled = true; };
+  }, [router]);
+
+  if (!user) {
+    return <main className="flex min-h-screen items-center justify-center bg-[#f5f3ee]"><p className="text-sm font-black text-stone-400">LABLOG</p></main>;
+  }
+
+  return (
+    <main className="min-h-screen bg-[#f5f3ee] text-stone-950">
+      <AppHeader user={user} />
+      <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-16">
+        <div className="mb-9 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-violet-500">02 / Mission</p>
+            <h1 className="mt-3 text-4xl font-black tracking-[-0.055em] sm:text-6xl">{"\uC624\uB298\uBD80\uD130 \uC5B4\uB5A4"}<br />{"\uB3C4\uC804\uC744 \uD560\uAE4C\uC694?"}</h1>
+          </div>
+          <p className="max-w-sm text-sm font-semibold leading-6 text-stone-400 sm:text-right">{"\uD55C \uBC88\uC5D0 \uD558\uB098\uC758 \uBBF8\uC158\uC5D0 \uC9D1\uC911\uD574 \uBCF4\uC138\uC694. \uB9E4\uC77C \uC5C5\uB370\uC774\uD2B8\uAC00 \uC9C4\uD589\uB960\uC5D0 \uBC18\uC601\uB429\uB2C8\uB2E4."}</p>
+        </div>
+
+        <MissionPanel mission={mission} posts={posts} onMissionChange={setMission} />
+
+        {message && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{message}</p>}
+
+        <div className="mt-8 flex items-center justify-between border-t border-black/[0.08] pt-6">
+          <Link href="/" className="text-sm font-black text-stone-400 hover:text-stone-900">{"\u2190 \uC774\uC804"}</Link>
+          {mission ? (
+            <Link href="/update" className="group inline-flex items-center gap-4 rounded-full bg-stone-950 py-2.5 pl-6 pr-2.5 text-sm font-black text-white shadow-[0_7px_0_#c7a600] transition hover:-translate-y-0.5">
+              {"\uB2E4\uC74C: \uC624\uB298 \uC5C5\uB370\uC774\uD2B8"}
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffd84d] text-stone-950">{"\u2192"}</span>
+            </Link>
+          ) : <span className="text-xs font-bold text-stone-300">{"\uBBF8\uC158\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694"}</span>}
+        </div>
+      </div>
+    </main>
+  );
+}

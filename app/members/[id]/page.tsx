@@ -67,7 +67,7 @@ export default function MemberProfilePage() {
     <main className="min-h-screen bg-[#f5f3ee] text-stone-950">
       <header className="border-b border-black/[0.06] bg-[#f5f3ee]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-8">
-          <Link href="/" className="flex items-center gap-2 text-sm font-black transition hover:-translate-x-1">{"\u2190 \uB7A9 \uD53C\uB4DC"}</Link>
+          <Link href="/feed" className="flex items-center gap-2 text-sm font-black transition hover:-translate-x-1">{"\u2190 \uB7A9 \uD53C\uB4DC"}</Link>
           <Link href="/" className="text-lg font-black tracking-[-0.04em]">LABLOG</Link>
           <div className="flex items-center gap-2">
             <NotificationsBell userId={currentUser.id} />
@@ -91,7 +91,7 @@ export default function MemberProfilePage() {
             <div className="flex gap-3">
               <div className="min-w-24 rounded-2xl bg-orange-500/20 px-5 py-4 text-center"><p className="text-2xl font-black">🔥 {currentStreak}</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">day streak</p></div>
               <div className="min-w-24 rounded-2xl bg-white/10 px-5 py-4 text-center"><p className="text-2xl font-black">{memberPosts.length}</p><p className="text-[10px] font-bold uppercase tracking-widest text-white/45">records</p></div>
-              {isMe && <Link href="/#new-post" className="flex items-center rounded-2xl bg-[#ffd84d] px-5 py-3 text-sm font-black text-stone-950 transition hover:-translate-y-0.5">{"\uC0C8 \uAE30\uB85D \uC62C\uB9AC\uAE30"}</Link>}
+              {isMe && <Link href="/update#new-post" className="flex items-center rounded-2xl bg-[#ffd84d] px-5 py-3 text-sm font-black text-stone-950 transition hover:-translate-y-0.5">{"\uC0C8 \uAE30\uB85D \uC62C\uB9AC\uAE30"}</Link>}
             </div>
           </div>
         </section>
@@ -111,7 +111,7 @@ export default function MemberProfilePage() {
               <p className="text-5xl">{"\u{1F4F7}"}</p>
               <h3 className="mt-5 text-xl font-black">{isMe ? "\uC544\uC9C1 \uC62C\uB9B0 \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694" : "\uC544\uC9C1 \uACF5\uC720\uB41C \uAE30\uB85D\uC774 \uC5C6\uC5B4\uC694"}</h3>
               <p className="mt-2 text-sm font-medium text-stone-400">{isMe ? "\uC624\uB298 \uD55C \uC77C\uC744 \uCCAB \uC0AC\uC9C4\uC73C\uB85C \uB0A8\uACA8 \uBCF4\uC138\uC694." : "\uCCAB \uAE30\uB85D\uC744 \uAE30\uB2E4\uB824 \uC8FC\uC138\uC694."}</p>
-              {isMe && <Link href="/#new-post" className="mt-6 inline-flex rounded-full bg-stone-950 px-5 py-3 text-sm font-black text-white">{"\uAE30\uB85D \uC62C\uB9AC\uAE30"}</Link>}
+              {isMe && <Link href="/update#new-post" className="mt-6 inline-flex rounded-full bg-stone-950 px-5 py-3 text-sm font-black text-white">{"\uAE30\uB85D \uC62C\uB9AC\uAE30"}</Link>}
             </div>
           )}
         </section>
