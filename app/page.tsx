@@ -5,6 +5,26 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getCurrentUser, logoutAccount, type AuthUser } from "./lib/auth";
 
+function OsLabLogo() {
+  return (
+    <div className="relative flex h-40 w-40 items-center justify-center rounded-[2.75rem] bg-[#191812] shadow-[0_18px_0_#d8b300,0_35px_80px_rgba(25,24,18,.24)] sm:h-48 sm:w-48">
+      <div className="absolute inset-3 rounded-[2.15rem] border border-white/10" />
+      <svg viewBox="0 0 160 160" aria-label="OS Lab logo" className="relative h-32 w-32 sm:h-40 sm:w-40">
+        <circle cx="80" cy="80" r="55" fill="none" stroke="#ffd84d" strokeWidth="3" strokeDasharray="5 9" />
+        <circle cx="80" cy="80" r="42" fill="#ffd84d" />
+        <path d="M32 80h18M110 80h18M80 32v18M80 110v18" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+        <circle cx="32" cy="80" r="5" fill="#9d83ff" />
+        <circle cx="128" cy="80" r="5" fill="#9d83ff" />
+        <circle cx="80" cy="32" r="5" fill="#9d83ff" />
+        <circle cx="80" cy="128" r="5" fill="#9d83ff" />
+        <text x="80" y="89" textAnchor="middle" fill="#191812" fontSize="31" fontWeight="900" letterSpacing="-3">OS</text>
+      </svg>
+      <span className="absolute -right-2 top-8 h-5 w-5 rounded-full bg-[#9d83ff] ring-4 ring-[#191812]" />
+      <span className="absolute bottom-6 left-1 h-3 w-3 rounded-full bg-emerald-400 ring-4 ring-[#191812]" />
+    </div>
+  );
+}
+
 export default function ReadyPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -22,51 +42,33 @@ export default function ReadyPage() {
   }, [router]);
 
   if (!user) {
-    return <main className="flex min-h-screen items-center justify-center bg-[#181611] text-white"><p className="text-sm font-black text-white/35">LABLOG</p></main>;
+    return <main className="flex min-h-screen items-center justify-center bg-[#f5f3ee]"><p className="text-sm font-black text-stone-400">OS LAB</p></main>;
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#181611] text-white">
-      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[#ffd84d]/25 blur-[100px]" />
-      <div className="pointer-events-none absolute -bottom-48 -right-32 h-[32rem] w-[32rem] rounded-full bg-[#8f72ff]/25 blur-[120px]" />
+    <main className="relative min-h-screen overflow-hidden bg-[#f5f3ee] text-[#191812]">
+      <div className="pointer-events-none absolute -left-28 -top-32 h-96 w-96 rounded-full bg-[#ffd84d]/45 blur-[100px]" />
+      <div className="pointer-events-none absolute -bottom-40 -right-28 h-[30rem] w-[30rem] rounded-full bg-[#9d83ff]/25 blur-[110px]" />
+      <div className="pointer-events-none absolute inset-0 opacity-[.035]" style={{ backgroundImage: "radial-gradient(#191812 1.5px, transparent 1.5px)", backgroundSize: "26px 26px" }} />
 
       <header className="relative z-10 flex items-center justify-between px-6 py-6 sm:px-10">
-        <Link href="/" className="flex items-center gap-3">
-          <span className="flex h-11 w-11 rotate-[-6deg] items-center justify-center rounded-2xl bg-[#ffd84d] text-xl text-stone-950 shadow-[0_6px_0_#8f7200]">{"\uD83D\uDCF8"}</span>
-          <span className="text-xl font-black tracking-[-0.04em]">LABLOG</span>
-        </Link>
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-stone-400">OS LAB / SYSTEM ONLINE</p>
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm font-bold text-white/45 sm:block">{user.name}</span>
-          <Link href={`/members/${user.id}`} className="flex h-10 w-10 items-center justify-center rounded-full text-[10px] font-black text-stone-950 ring-2 ring-white/20" style={{ background: user.avatarBackground }}>{user.initials}</Link>
-          <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="text-xs font-bold text-white/35 hover:text-white">{"\uB85C\uADF8\uC544\uC6C3"}</button>
+          <span className="hidden text-sm font-bold text-stone-400 sm:block">{user.name}</span>
+          <Link href={`/members/${user.id}`} className="flex h-10 w-10 items-center justify-center rounded-full text-[10px] font-black ring-2 ring-white shadow-sm" style={{ background: user.avatarBackground }}>{user.initials}</Link>
+          <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="text-xs font-bold text-stone-400 hover:text-stone-950">{"\uB85C\uADF8\uC544\uC6C3"}</button>
         </div>
       </header>
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-96px)] max-w-6xl flex-col justify-center px-6 pb-16 sm:px-10">
-        <p className="mb-6 flex items-center gap-3 text-xs font-black uppercase tracking-[0.24em] text-[#ffd84d]">
-          <span className="h-px w-10 bg-[#ffd84d]" /> Your daily challenge
-        </p>
-        <h1 className="max-w-4xl text-6xl font-black leading-[.92] tracking-[-0.07em] sm:text-8xl lg:text-[9rem]">
-          {"\uC900\uBE44\uB410\uC5B4?"}
-        </h1>
-        <p className="mt-7 max-w-xl text-base font-semibold leading-7 text-white/50 sm:text-lg">
-          {"\uC624\uB298\uC758 \uBAA9\uD45C\uB97C \uC120\uD0DD\uD558\uACE0, \uC791\uC740 \uC5C5\uB370\uC774\uD2B8\uB85C \uB098\uB9CC\uC758 \uC5F0\uC18D \uAE30\uB85D\uC744 \uB9CC\uB4E4\uC5B4 \uBCF4\uC138\uC694."}
-        </p>
-
-        <div className="mt-10 flex flex-col gap-5 sm:flex-row sm:items-center">
-          <Link href="/mission" className="group inline-flex w-fit items-center gap-6 rounded-full bg-[#ffd84d] py-3 pl-7 pr-3 text-lg font-black text-stone-950 shadow-[0_8px_0_#8f7200] transition hover:-translate-y-1 active:translate-y-1 active:shadow-none">
-            {"\uC2DC\uC791\uD558\uAE30"}
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-950 text-xl text-white transition group-hover:translate-x-1">{"\u2192"}</span>
-          </Link>
-          <Link href="/feed" className="w-fit text-sm font-bold text-white/40 underline-offset-4 hover:text-white hover:underline">{"\uBA3C\uC800 \uD53C\uB4DC \uBCF4\uAE30"}</Link>
-        </div>
-
-        <div className="mt-16 grid max-w-2xl grid-cols-3 gap-3 border-t border-white/10 pt-6 text-xs font-black sm:gap-8">
-          <div><span className="text-[#ffd84d]">01</span><p className="mt-2 text-white/35">READY</p></div>
-          <div><span className="text-white/25">02</span><p className="mt-2 text-white/35">MISSION</p></div>
-          <div><span className="text-white/25">03</span><p className="mt-2 text-white/35">UPDATE</p></div>
-        </div>
-      </div>
+      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-88px)] max-w-4xl flex-col items-center justify-center px-6 pb-20 text-center">
+        <OsLabLogo />
+        <p className="mt-12 text-sm font-black uppercase tracking-[0.28em] text-violet-500">OS lab {"\uD658\uC601"}</p>
+        <h1 className="mt-4 text-6xl font-black tracking-[-0.075em] sm:text-8xl">{"\uC900\uBE44\uB410\uC5B4?"}</h1>
+        <Link href="/mission" className="group mt-10 inline-flex items-center gap-5 rounded-full bg-[#191812] py-3 pl-8 pr-3 text-lg font-black text-white shadow-[0_8px_0_#d8b300] transition hover:-translate-y-1 active:translate-y-1 active:shadow-none">
+          {"\uC2DC\uC791\uD558\uAE30"}
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#ffd84d] text-xl text-[#191812] transition group-hover:translate-x-1">{"\u2192"}</span>
+        </Link>
+      </section>
     </main>
   );
 }
