@@ -1,16 +1,22 @@
 import { createClient } from "./supabase/client";
 
 export type AvatarConfig = {
+  character: "person";
+  gender: "male" | "female";
+  body: "slim" | "round";
   skin: string;
-  hair: "wave" | "sprout" | "cap" | "short";
+  hair: "short" | "side" | "long" | "wave";
   hairColor: string;
   outfitColor: string;
   accessory: "none" | "glasses" | "star" | "headphones";
 };
 
 export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
+  character: "person",
+  gender: "female",
+  body: "slim",
   skin: "#f2b98c",
-  hair: "wave",
+  hair: "long",
   hairColor: "#3d2a22",
   outfitColor: "#7c5cff",
   accessory: "none",
@@ -19,8 +25,11 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
 export function mapAvatarConfig(value: unknown): AvatarConfig {
   const config = value && typeof value === "object" ? value as Partial<AvatarConfig> : {};
   return {
+    character: "person",
+    gender: ["male", "female"].includes(String(config.gender)) ? config.gender as AvatarConfig["gender"] : DEFAULT_AVATAR_CONFIG.gender,
+    body: ["slim", "round"].includes(String(config.body)) ? config.body as AvatarConfig["body"] : DEFAULT_AVATAR_CONFIG.body,
     skin: typeof config.skin === "string" ? config.skin : DEFAULT_AVATAR_CONFIG.skin,
-    hair: ["wave", "sprout", "cap", "short"].includes(String(config.hair)) ? config.hair as AvatarConfig["hair"] : DEFAULT_AVATAR_CONFIG.hair,
+    hair: ["short", "side", "long", "wave"].includes(String(config.hair)) ? config.hair as AvatarConfig["hair"] : DEFAULT_AVATAR_CONFIG.hair,
     hairColor: typeof config.hairColor === "string" ? config.hairColor : DEFAULT_AVATAR_CONFIG.hairColor,
     outfitColor: typeof config.outfitColor === "string" ? config.outfitColor : DEFAULT_AVATAR_CONFIG.outfitColor,
     accessory: ["none", "glasses", "star", "headphones"].includes(String(config.accessory)) ? config.accessory as AvatarConfig["accessory"] : DEFAULT_AVATAR_CONFIG.accessory,
