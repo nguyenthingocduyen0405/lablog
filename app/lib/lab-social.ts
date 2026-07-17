@@ -53,6 +53,7 @@ const missionActivityCache = new Map<string, CacheEntry<MissionActivity[]>>();
 const calendarPostsCache = new Map<string, CacheEntry<DailyPost[]>>();
 const activeMissionsCache = new Map<string, CacheEntry<Mission[]>>();
 const notificationsCache = new Map<string, CacheEntry<LabNotification[]>>();
+let calendarEventsCache: CacheEntry<CalendarEvent[]> | null = null;
 let reminderCheckedAt = 0;
 
 function validCache<T>(entry: CacheEntry<T> | null | undefined) {
@@ -92,6 +93,27 @@ export type LabNotification = {
   readAt: string | null;
 };
 
+export const CALENDAR_EVENT_CATEGORIES = [
+  { value: "travel", label: "여행", emoji: "✈️", color: "#9d83ff" },
+  { value: "conference", label: "학회", emoji: "🎤", color: "#55c9a5" },
+  { value: "deadline", label: "마감", emoji: "⏰", color: "#ff8a76" },
+  { value: "leave", label: "휴가", emoji: "🌿", color: "#65a9ff" },
+  { value: "other", label: "기타", emoji: "📌", color: "#f5c842" },
+] as const;
+
+export type CalendarEventCategory = (typeof CALENDAR_EVENT_CATEGORIES)[number]["value"];
+
+export type CalendarEvent = {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  category: CalendarEventCategory;
+  startsOn: string;
+  endsOn: string;
+  createdAt: string;
+};
+
 export type Mission = {
   id: string;
   userId: string;
@@ -118,6 +140,19 @@ function mapMission(row: Record<string, string | number | boolean>): Mission {
   };
 }
 
+function mapCalendarEvent(row: Record<string, string>): CalendarEvent {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    description: row.description,
+    category: row.category as CalendarEventCategory,
+    startsOn: row.starts_on,
+    endsOn: row.ends_on,
+    createdAt: row.created_at,
+  };
+}
+
 export async function loadLabMembers(): Promise<LabMember[]> {
   const cached = validCache(membersCache);
   if (cached) return cached;
@@ -134,6 +169,49 @@ export async function loadLabMembers(): Promise<LabMember[]> {
   }));
   membersCache = { value: members, expiresAt: Date.now() + DATA_CACHE_MS };
   return members;
+}
+
+export async function loadCalendarEvents(): Promise<CalendarEvent[]> {
+  const cached = validCache(calendarEventsCache);
+  if (cached) return cached;
+  const supabase = createClient();
+  const { data, error } = await supabase.from("calendar_events")
+    .select("id,user_id,title,description,category,starts_on,ends_on,created_at")
+    .order("starts_on", { ascending: true })
+    .limit(500);
+  if (error) throw error;
+  const events = (data ?? []).map((row) => mapCalendarEvent(row));
+  calendarEventsCache = { value: events, expiresAt: Date.now() + DATA_CACHE_MS };
+  return events;
+}
+
+export async function createCalendarEvent(input: {
+  userId: string;
+  title: string;
+  description: string;
+  category: CalendarEventCategory;
+  startsOn: string;
+  endsOn: string;
+}): Promise<CalendarEvent> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("calendar_events").insert({
+    user_id: input.userId,
+    title: input.title,
+    description: input.description,
+    category: input.category,
+    starts_on: input.startsOn,
+    ends_on: input.endsOn,
+  }).select("id,user_id,title,description,category,starts_on,ends_on,created_at").single();
+  if (error) throw error;
+  calendarEventsCache = null;
+  return mapCalendarEvent(data);
+}
+
+export async function deleteCalendarEvent(eventId: string, userId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("calendar_events").delete().eq("id", eventId).eq("user_id", userId);
+  if (error) throw error;
+  calendarEventsCache = null;
 }
 
 export async function createDailyPost(
