@@ -8,6 +8,7 @@ import {
   CALENDAR_EVENT_CATEGORIES,
   createCalendarEvent,
   deleteCalendarEvent,
+  getMemberAvailability,
   loadCalendarEvents,
   loadLabMembers,
   seoulDateKey,
@@ -81,6 +82,7 @@ export default function CalendarPage() {
   const selectedEvents = useMemo(() => filteredEvents.filter((event) => event.startsOn <= selectedDay && event.endsOn >= selectedDay), [filteredEvents, selectedDay]);
   const activeMembers = new Set(monthEvents.map((event) => event.userId)).size;
   const myMonthEvents = user ? monthEvents.filter((event) => event.userId === user.id).length : 0;
+  const todayAvailabilities = members.map((member) => ({ member, availability: getMemberAvailability(events, member.id, today) })).filter((item) => item.availability);
 
   function changeMonth(offset: number) {
     const next = new Date(year, month + offset, 1);
@@ -152,6 +154,11 @@ export default function CalendarPage() {
         </div>
 
         {error && <p className="mt-6 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p>}
+
+        <section className="mt-7 rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-black/[0.05] sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-violet-500">TODAY IN THE LAB</p><h2 className="mt-1 text-xl font-black">오늘의 팀 상태</h2></div><p className="text-xs font-bold text-stone-400">Calendar 일정에서 자동으로 표시돼요.</p></div>
+          {todayAvailabilities.length > 0 ? <div className="mt-4 flex gap-2 overflow-x-auto pb-1">{todayAvailabilities.map(({ member, availability }) => availability && <div key={member.id} className="flex shrink-0 items-center gap-2 rounded-full bg-stone-50 py-1.5 pl-1.5 pr-3 ring-1 ring-black/[0.06]"><span className="flex h-8 w-8 items-center justify-center rounded-full text-[9px] font-black" style={{ background: member.avatarBackground }}>{member.initials}</span><span className="text-xs font-black">{member.name}</span><span className="rounded-full px-2 py-1 text-[9px] font-black text-stone-950" style={{ backgroundColor: availability.color }}>{availability.emoji} {availability.label}</span></div>)}</div> : <p className="mt-4 rounded-2xl border border-dashed border-stone-200 px-4 py-5 text-center text-xs font-bold text-stone-400">오늘 공유된 재실 상태가 없어요.</p>}
+        </section>
 
         <div className="mt-8 flex gap-2 overflow-x-auto pb-2">
           <button type="button" onClick={() => setCategoryFilter("all")} className={`shrink-0 rounded-full px-4 py-2.5 text-xs font-black transition ${categoryFilter === "all" ? "bg-stone-950 text-white" : "bg-white text-stone-500 ring-1 ring-black/[0.06]"}`}>전체 일정</button>

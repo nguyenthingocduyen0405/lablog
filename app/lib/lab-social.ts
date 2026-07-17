@@ -114,6 +114,30 @@ export type CalendarEvent = {
   createdAt: string;
 };
 
+export type MemberAvailability = {
+  label: string;
+  emoji: string;
+  color: string;
+  eventTitle: string;
+};
+
+const availabilityByCategory: Record<CalendarEventCategory, Omit<MemberAvailability, "eventTitle"> & { priority: number }> = {
+  leave: { label: "휴가 중", emoji: "🌿", color: "#65a9ff", priority: 1 },
+  travel: { label: "출장/여행 중", emoji: "✈️", color: "#9d83ff", priority: 2 },
+  conference: { label: "학회 참석", emoji: "🎤", color: "#55c9a5", priority: 3 },
+  deadline: { label: "집중 작업 중", emoji: "⏰", color: "#ff8a76", priority: 4 },
+  other: { label: "일정 있음", emoji: "📌", color: "#f5c842", priority: 5 },
+};
+
+export function getMemberAvailability(events: CalendarEvent[], userId: string, day = seoulDateKey(new Date())): MemberAvailability | null {
+  const currentEvent = events
+    .filter((event) => event.userId === userId && event.startsOn <= day && event.endsOn >= day)
+    .sort((a, b) => availabilityByCategory[a.category].priority - availabilityByCategory[b.category].priority)[0];
+  if (!currentEvent) return null;
+  const availability = availabilityByCategory[currentEvent.category];
+  return { label: availability.label, emoji: availability.emoji, color: availability.color, eventTitle: currentEvent.title };
+}
+
 export type Mission = {
   id: string;
   userId: string;

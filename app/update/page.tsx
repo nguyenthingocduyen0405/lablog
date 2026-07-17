@@ -9,12 +9,15 @@ import { getCurrentUser, type AuthUser } from "../lib/auth";
 import {
   calculateCurrentStreak,
   createDailyPost,
+  getMemberAvailability,
   hasPostedToday,
   isPostStatus,
   loadActiveMissions,
+  loadCalendarEvents,
   loadDailyPosts,
   loadLabMembers,
   POST_STATUSES,
+  type CalendarEvent,
   type DailyPost,
   type LabMember,
   type Mission,
@@ -26,6 +29,7 @@ export default function UpdatePage() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [posts, setPosts] = useState<DailyPost[]>([]);
   const [members, setMembers] = useState<LabMember[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [previewUrl, setPreviewUrl] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [message, setMessage] = useState("");
@@ -37,16 +41,18 @@ export default function UpdatePage() {
         router.replace("/login");
         return;
       }
-      const [activeMissions, loadedPosts, loadedMembers] = await Promise.all([
+      const [activeMissions, loadedPosts, loadedMembers, loadedCalendarEvents] = await Promise.all([
         loadActiveMissions(currentUser.id),
         loadDailyPosts(),
         loadLabMembers(),
+        loadCalendarEvents().catch(() => []),
       ]);
       if (cancelled) return;
       setUser(currentUser);
       setMissions(activeMissions);
       setPosts(loadedPosts);
       setMembers(loadedMembers);
+      setCalendarEvents(loadedCalendarEvents);
     }).catch(() => setMessage("Supabase \uC5F0\uACB0\uC744 \uD655\uC778\uD574 \uC8FC\uC138\uC694."));
     return () => { cancelled = true; };
   }, [router]);
@@ -172,12 +178,15 @@ export default function UpdatePage() {
           </div>
 
           <div id="team" className="mb-9 flex scroll-mt-24 gap-3 overflow-x-auto pb-2">
-            {members.map((member) => (
-              <Link key={member.id} href={`/members/${member.id}`} className="flex min-w-40 items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/[0.05] transition hover:-translate-y-0.5">
+            {members.map((member) => {
+              const availability = getMemberAvailability(calendarEvents, member.id);
+              return (
+              <Link key={member.id} href={`/members/${member.id}`} className="flex min-w-48 items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/[0.05] transition hover:-translate-y-0.5">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[10px] font-black" style={{ background: member.avatarBackground }}>{member.initials}</span>
-                <span className="min-w-0"><span className="block truncate text-sm font-black">{member.name}</span><span className="mt-0.5 block truncate text-[10px] font-semibold text-stone-400">{member.role}</span></span>
+                <span className="min-w-0"><span className="block truncate text-sm font-black">{member.name}</span>{availability ? <span className="mt-1 inline-flex max-w-full items-center gap-1 truncate rounded-full px-2 py-1 text-[9px] font-black text-stone-950" style={{ backgroundColor: availability.color }}>{availability.emoji} {availability.label}</span> : <span className="mt-0.5 block truncate text-[10px] font-semibold text-stone-400">연구실 상태 미등록</span>}</span>
               </Link>
-            ))}
+              );
+            })}
           </div>
 
           {sortedPosts.length > 0 ? (

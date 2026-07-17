@@ -9,9 +9,12 @@ import NotificationsBell from "../../components/notifications-bell";
 import { getCurrentUser, logoutAccount, type AuthUser } from "../../lib/auth";
 import {
   calculateCurrentStreak,
+  getMemberAvailability,
+  loadCalendarEvents,
   loadDailyPosts,
   loadLabMembers,
   type DailyPost,
+  type CalendarEvent,
   type LabMember,
 } from "../../lib/lab-social";
 
@@ -21,6 +24,7 @@ export default function MemberProfilePage() {
   const [localPosts, setLocalPosts] = useState<DailyPost[]>([]);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [members, setMembers] = useState<LabMember[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const member = members.find((item) => item.id === id);
 
   useEffect(() => {
@@ -30,11 +34,12 @@ export default function MemberProfilePage() {
         router.replace("/login");
         return;
       }
-      const [loadedMembers, loadedPosts] = await Promise.all([loadLabMembers(), loadDailyPosts()]);
+      const [loadedMembers, loadedPosts, loadedCalendarEvents] = await Promise.all([loadLabMembers(), loadDailyPosts(), loadCalendarEvents().catch(() => [])]);
       if (cancelled) return;
       setCurrentUser(user);
       setMembers(loadedMembers);
       setLocalPosts(loadedPosts);
+      setCalendarEvents(loadedCalendarEvents);
     }).catch(() => router.replace("/login"));
     return () => { cancelled = true; };
   }, [router]);
@@ -67,6 +72,7 @@ export default function MemberProfilePage() {
   }
 
   const isMe = member.id === currentUser.id;
+  const availability = getMemberAvailability(calendarEvents, member.id);
 
   return (
     <main className="min-h-screen bg-[#f5f3ee] pb-24 text-stone-950 md:pb-0">
@@ -91,7 +97,7 @@ export default function MemberProfilePage() {
               <div>
                 <div className="flex items-center gap-2"><h1 className="text-3xl font-black tracking-[-0.04em] sm:text-4xl">{member.name}</h1>{isMe && <span className="rounded-full bg-[#ffd84d] px-2 py-1 text-[10px] font-black text-stone-950">ME</span>}</div>
                 <p className="mt-2 text-sm font-semibold text-white/55">{member.role}</p>
-                <p className="mt-4 flex items-center gap-2 text-sm font-bold"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" />{member.status}</p>
+                {availability ? <p className="mt-4 flex w-fit items-center gap-2 rounded-full px-3 py-2 text-xs font-black text-stone-950" style={{ backgroundColor: availability.color }}>{availability.emoji} {availability.label}<span className="max-w-40 truncate opacity-60">· {availability.eventTitle}</span></p> : <p className="mt-4 flex items-center gap-2 text-sm font-bold"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" />연구실 상태 미등록</p>}
               </div>
             </div>
             <div className="flex gap-3">
