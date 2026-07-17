@@ -39,7 +39,7 @@ export default function MissionPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f3ee] text-stone-950">
+    <main className="min-h-screen bg-[#f5f3ee] pb-24 text-stone-950 md:pb-0">
       <AppHeader user={user} />
       <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-16">
         <div className="mb-9 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">

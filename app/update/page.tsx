@@ -98,7 +98,7 @@ export default function UpdatePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f3ee] text-stone-950">
+    <main className="min-h-screen bg-[#f5f3ee] pb-24 text-stone-950 md:pb-0">
       <AppHeader user={user} />
       <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
         <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -171,7 +171,7 @@ export default function UpdatePage() {
             <Link href="/mission" className="w-fit rounded-full bg-white px-4 py-2 text-xs font-black text-stone-500 shadow-sm ring-1 ring-black/[0.06] hover:text-stone-950">{"\uBBF8\uC158 \uD655\uC778"}</Link>
           </div>
 
-          <div className="mb-9 flex gap-3 overflow-x-auto pb-2">
+          <div id="team" className="mb-9 flex scroll-mt-24 gap-3 overflow-x-auto pb-2">
             {members.map((member) => (
               <Link key={member.id} href={`/members/${member.id}`} className="flex min-w-40 items-center gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/[0.05] transition hover:-translate-y-0.5">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[10px] font-black" style={{ background: member.avatarBackground }}>{member.initials}</span>

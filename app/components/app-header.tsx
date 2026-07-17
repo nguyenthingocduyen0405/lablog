@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logoutAccount, type AuthUser } from "../lib/auth";
+import FloatingNav from "./floating-nav";
 import NotificationsBell from "./notifications-bell";
 
 export default function AppHeader({ user }: { user: AuthUser }) {
   const router = useRouter();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-[#f5f3ee]/90 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3 sm:px-8">
+    <>
+      <header className="sticky top-0 z-40 border-b border-black/[0.06] bg-[#f5f3ee]/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3 sm:px-8">
         <Link href="/update" className="flex items-center gap-3">
           <span className="flex h-10 w-10 rotate-[-6deg] items-center justify-center rounded-[.9rem] bg-[#ffd84d] text-lg shadow-[0_5px_0_#181611]">{"\uD83D\uDCF8"}</span>
           <span className="text-lg font-black tracking-[-0.04em]">LABLOG</span>
@@ -25,7 +27,9 @@ export default function AppHeader({ user }: { user: AuthUser }) {
             {"\uB85C\uADF8\uC544\uC6C3"}
           </button>
         </div>
-      </div>
-    </header>
+        </div>
+      </header>
+      <FloatingNav />
+    </>
   );
 }

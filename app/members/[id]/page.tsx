@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import DailyPostCard from "../../components/daily-post-card";
+import FloatingNav from "../../components/floating-nav";
 import NotificationsBell from "../../components/notifications-bell";
 import { getCurrentUser, logoutAccount, type AuthUser } from "../../lib/auth";
 import {
@@ -68,7 +69,7 @@ export default function MemberProfilePage() {
   const isMe = member.id === currentUser.id;
 
   return (
-    <main className="min-h-screen bg-[#f5f3ee] text-stone-950">
+    <main className="min-h-screen bg-[#f5f3ee] pb-24 text-stone-950 md:pb-0">
       <header className="border-b border-black/[0.06] bg-[#f5f3ee]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-8">
           <Link href="/update#feed" className="flex items-center gap-2 text-sm font-black transition hover:-translate-x-1">{"\u2190 \uB7A9 \uD53C\uB4DC"}</Link>
@@ -79,6 +80,7 @@ export default function MemberProfilePage() {
           </div>
         </div>
       </header>
+      <FloatingNav />
 
       <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
         <section className="relative overflow-hidden rounded-[2.5rem] bg-[#181611] px-6 py-8 text-white shadow-[0_24px_80px_rgba(40,32,14,0.18)] sm:px-10 sm:py-10">
