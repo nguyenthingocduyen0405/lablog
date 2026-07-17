@@ -58,9 +58,19 @@ export async function loginAccount(email: string, password: string) {
 export async function getCurrentUser(): Promise<AuthUser | null> {
   const supabase = createClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError || !authData.user) return null;
+  if (authError || !authData.user) {
+    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+    return null;
+  }
   const { data: profile, error: profileError } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,onboarding_completed_at").eq("id", authData.user.id).single();
-  if (profileError || !profile) return null;
+  if (profileError) {
+    if (profileError.code === "PGRST116") await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+    return null;
+  }
+  if (!profile) {
+    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+    return null;
+  }
   return mapProfile(profile, authData.user.email ?? "");
 }
 
