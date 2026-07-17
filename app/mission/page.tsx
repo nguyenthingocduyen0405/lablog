@@ -6,13 +6,13 @@ import { useEffect, useState } from "react";
 import AppHeader from "../components/app-header";
 import MissionPanel from "../components/mission-panel";
 import { getCurrentUser, type AuthUser } from "../lib/auth";
-import { loadActiveMissions, loadDailyPosts, type DailyPost, type Mission } from "../lib/lab-social";
+import { loadActiveMissions, loadMissionActivity, type Mission, type MissionActivity } from "../lib/lab-social";
 
 export default function MissionPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [posts, setPosts] = useState<DailyPost[]>([]);
+  const [posts, setPosts] = useState<MissionActivity[]>([]);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export default function MissionPage() {
       }
       const [activeMissions, loadedPosts] = await Promise.all([
         loadActiveMissions(currentUser.id),
-        loadDailyPosts(),
+        loadMissionActivity(currentUser.id),
       ]);
       if (cancelled) return;
       setUser(currentUser);

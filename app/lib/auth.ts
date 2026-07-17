@@ -11,6 +11,10 @@ const avatarBackgrounds = [
   "linear-gradient(135deg, #76b6ff, #3478f6)",
 ];
 
+const USER_CACHE_MS = 15_000;
+let currentUserCache: { value: AuthUser; expiresAt: number } | null = null;
+let currentUserRequest: Promise<AuthUser | null> | null = null;
+
 function makeInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length > 1) return parts.slice(-2).map((part) => part[0]).join("").toUpperCase();
@@ -31,6 +35,7 @@ function mapProfile(profile: Record<string, string | null>, email = ""): AuthUse
 }
 
 export async function registerAccount(input: { name: string; email: string; password: string; role: string }) {
+  currentUserCache = null;
   const supabase = createClient();
   const paletteIndex = Math.abs(input.email.split("").reduce((sum, character) => sum + character.charCodeAt(0), 0)) % avatarBackgrounds.length;
   const { data, error } = await supabase.auth.signUp({
@@ -50,12 +55,13 @@ export async function registerAccount(input: { name: string; email: string; pass
 }
 
 export async function loginAccount(email: string, password: string) {
+  currentUserCache = null;
   const supabase = createClient();
   const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
   if (error) throw error;
 }
 
-export async function getCurrentUser(): Promise<AuthUser | null> {
+async function fetchCurrentUser(): Promise<AuthUser | null> {
   const supabase = createClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) {
@@ -71,7 +77,20 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
     return null;
   }
-  return mapProfile(profile, authData.user.email ?? "");
+  const user = mapProfile(profile, authData.user.email ?? "");
+  currentUserCache = { value: user, expiresAt: Date.now() + USER_CACHE_MS };
+  return user;
+}
+
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  if (currentUserCache && currentUserCache.expiresAt > Date.now()) return currentUserCache.value;
+  if (currentUserRequest) return currentUserRequest;
+  currentUserRequest = fetchCurrentUser();
+  try {
+    return await currentUserRequest;
+  } finally {
+    currentUserRequest = null;
+  }
 }
 
 export async function completeOnboarding(userId: string) {
@@ -80,9 +99,17 @@ export async function completeOnboarding(userId: string) {
     .update({ onboarding_completed_at: new Date().toISOString() })
     .eq("id", userId);
   if (error) throw error;
+  if (currentUserCache?.value.id === userId) {
+    currentUserCache = {
+      value: { ...currentUserCache.value, onboardingCompletedAt: new Date().toISOString() },
+      expiresAt: Date.now() + USER_CACHE_MS,
+    };
+  }
 }
 
 export async function logoutAccount() {
+  currentUserCache = null;
+  currentUserRequest = null;
   const supabase = createClient();
   const { error } = await supabase.auth.signOut();
   if (error) throw error;

@@ -43,6 +43,30 @@ export type DailyPost = {
   comments: PostComment[];
 };
 
+export type MissionActivity = Pick<DailyPost, "missionId" | "createdAt">;
+
+const DATA_CACHE_MS = 15_000;
+type CacheEntry<T> = { value: T; expiresAt: number };
+let membersCache: CacheEntry<LabMember[]> | null = null;
+let dailyPostsCache: CacheEntry<DailyPost[]> | null = null;
+const missionActivityCache = new Map<string, CacheEntry<MissionActivity[]>>();
+const calendarPostsCache = new Map<string, CacheEntry<DailyPost[]>>();
+const activeMissionsCache = new Map<string, CacheEntry<Mission[]>>();
+const notificationsCache = new Map<string, CacheEntry<LabNotification[]>>();
+let reminderCheckedAt = 0;
+
+function validCache<T>(entry: CacheEntry<T> | null | undefined) {
+  return entry && entry.expiresAt > Date.now() ? entry.value : null;
+}
+
+function invalidatePostCaches(userId?: string) {
+  dailyPostsCache = null;
+  if (userId) {
+    missionActivityCache.delete(userId);
+    calendarPostsCache.delete(userId);
+  }
+}
+
 export type PostReaction = { userId: string; emoji: string };
 
 export type PostComment = {
@@ -95,10 +119,12 @@ function mapMission(row: Record<string, string | number | boolean>): Mission {
 }
 
 export async function loadLabMembers(): Promise<LabMember[]> {
+  const cached = validCache(membersCache);
+  if (cached) return cached;
   const supabase = createClient();
   const { data, error } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background").order("created_at");
   if (error) throw error;
-  return (data ?? []).map((profile) => ({
+  const members = (data ?? []).map((profile) => ({
     id: profile.id,
     name: profile.name,
     role: profile.role,
@@ -106,6 +132,8 @@ export async function loadLabMembers(): Promise<LabMember[]> {
     initials: profile.initials,
     avatarBackground: profile.avatar_background,
   }));
+  membersCache = { value: members, expiresAt: Date.now() + DATA_CACHE_MS };
+  return members;
 }
 
 export async function createDailyPost(
@@ -133,6 +161,7 @@ export async function createDailyPost(
     await supabase.storage.from("post-images").remove([imagePath]);
     throw postError;
   }
+  invalidatePostCaches(memberId);
   const { data: publicImage } = supabase.storage.from("post-images").getPublicUrl(data.image_path);
   return {
     id: data.id,
@@ -152,6 +181,8 @@ export async function createDailyPost(
 }
 
 export async function loadDailyPosts(): Promise<DailyPost[]> {
+  const cached = validCache(dailyPostsCache);
+  if (cached) return cached;
   const supabase = createClient();
   const { data, error } = await supabase.from("posts").select("id,user_id,mission_id,mission_title,score_awarded,caption,status,image_path,created_at").order("created_at", { ascending: false });
   if (error) throw error;
@@ -165,7 +196,7 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
   const isMissingTable = (code?: string) => code === "PGRST205" || code === "42P01";
   if (reactionError && !isMissingTable(reactionError.code)) throw reactionError;
   if (commentError && !isMissingTable(commentError.code)) throw commentError;
-  return posts.map((post) => {
+  const mappedPosts = posts.map((post) => {
     const { data: publicImage } = supabase.storage.from("post-images").getPublicUrl(post.image_path);
     return {
       id: post.id,
@@ -188,6 +219,53 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
       })),
     };
   });
+  dailyPostsCache = { value: mappedPosts, expiresAt: Date.now() + DATA_CACHE_MS };
+  return mappedPosts;
+}
+
+export async function loadMissionActivity(userId: string): Promise<MissionActivity[]> {
+  const cached = validCache(missionActivityCache.get(userId));
+  if (cached) return cached;
+  const supabase = createClient();
+  const { data, error } = await supabase.from("posts")
+    .select("mission_id,created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const activity = (data ?? []).map((post) => ({ missionId: post.mission_id, createdAt: post.created_at }));
+  missionActivityCache.set(userId, { value: activity, expiresAt: Date.now() + DATA_CACHE_MS });
+  return activity;
+}
+
+export async function loadCalendarPosts(userId: string): Promise<DailyPost[]> {
+  const cached = validCache(calendarPostsCache.get(userId));
+  if (cached) return cached;
+  const supabase = createClient();
+  const { data, error } = await supabase.from("posts")
+    .select("id,user_id,mission_id,mission_title,score_awarded,caption,status,image_path,created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const calendarPosts = (data ?? []).map((post) => {
+    const { data: publicImage } = supabase.storage.from("post-images").getPublicUrl(post.image_path);
+    return {
+      id: post.id,
+      memberId: post.user_id,
+      missionId: post.mission_id,
+      missionTitle: post.mission_title,
+      scoreAwarded: post.score_awarded ?? 0,
+      caption: post.caption,
+      status: (post.status ?? "working") as PostStatus,
+      createdAt: post.created_at,
+      imageDataUrl: publicImage.publicUrl,
+      background: "linear-gradient(145deg, #292524, #57534e)",
+      emoji: "✨",
+      reactions: [],
+      comments: [],
+    } satisfies DailyPost;
+  });
+  calendarPostsCache.set(userId, { value: calendarPosts, expiresAt: Date.now() + DATA_CACHE_MS });
+  return calendarPosts;
 }
 
 export function formatPostDate(value: string) {
@@ -203,18 +281,20 @@ export function seoulDateKey(value: Date) {
   }).format(value);
 }
 
-export function hasMissionUpdateToday(posts: DailyPost[], missionId: string, now = new Date()) {
+export function hasMissionUpdateToday(posts: MissionActivity[], missionId: string, now = new Date()) {
   const today = seoulDateKey(now);
   return posts.some((post) => post.missionId === missionId && seoulDateKey(new Date(post.createdAt)) === today);
 }
 
-export function countMissionUpdateDays(posts: DailyPost[], missionId: string) {
+export function countMissionUpdateDays(posts: MissionActivity[], missionId: string) {
   return new Set(
     posts.filter((post) => post.missionId === missionId).map((post) => seoulDateKey(new Date(post.createdAt))),
   ).size;
 }
 
 export async function loadActiveMissions(userId: string): Promise<Mission[]> {
+  const cached = validCache(activeMissionsCache.get(userId));
+  if (cached) return cached;
   const supabase = createClient();
   const { data, error } = await supabase.from("missions")
     .select("id,user_id,title,duration_days,points_per_update,started_on,ends_on,active,created_at")
@@ -224,7 +304,9 @@ export async function loadActiveMissions(userId: string): Promise<Mission[]> {
     .order("created_at", { ascending: false })
     .limit(20);
   if (error && error.code !== "PGRST205") throw error;
-  return (data ?? []).map(mapMission);
+  const missions = (data ?? []).map(mapMission);
+  activeMissionsCache.set(userId, { value: missions, expiresAt: Date.now() + DATA_CACHE_MS });
+  return missions;
 }
 
 export async function loadActiveMission(userId: string): Promise<Mission | null> {
@@ -246,7 +328,9 @@ export async function addMission(title: string, durationDays: number): Promise<M
     mission_duration: durationDays,
   });
   if (error) throw error;
-  return mapMission(data);
+  const mission = mapMission(data);
+  activeMissionsCache.delete(mission.userId);
+  return mission;
 }
 
 export const setActiveMission = addMission;
@@ -282,6 +366,7 @@ export async function setPostReaction(postId: string, userId: string, emoji: str
   if (!emoji) {
     const { error } = await supabase.from("post_reactions").delete().eq("post_id", postId).eq("user_id", userId);
     if (error) throw error;
+    dailyPostsCache = null;
     return;
   }
   const { error } = await supabase.from("post_reactions").upsert(
@@ -289,6 +374,7 @@ export async function setPostReaction(postId: string, userId: string, emoji: str
     { onConflict: "post_id,user_id" },
   );
   if (error) throw error;
+  dailyPostsCache = null;
 }
 
 export async function createPostComment(postId: string, userId: string, body: string): Promise<PostComment> {
@@ -298,10 +384,13 @@ export async function createPostComment(postId: string, userId: string, body: st
     .select("id,user_id,body,created_at")
     .single();
   if (error) throw error;
+  dailyPostsCache = null;
   return { id: data.id, userId: data.user_id, body: data.body, createdAt: data.created_at };
 }
 
 export async function loadNotifications(userId: string): Promise<LabNotification[]> {
+  const cached = validCache(notificationsCache.get(userId));
+  if (cached) return cached;
   const supabase = createClient();
   const { data, error } = await supabase.from("notifications")
     .select("id,type,emoji,comment_preview,post_id,actor_id,mission_id,mission_title,created_at,read_at")
@@ -315,7 +404,7 @@ export async function loadNotifications(userId: string): Promise<LabNotification
     ? await supabase.from("profiles").select("id,name,initials,avatar_background").in("id", actorIds)
     : { data: [], error: null };
   if (result.error) throw result.error;
-  return rows.map((item) => {
+  const notifications = rows.map((item) => {
     const actor = (result.data ?? []).find((profile) => profile.id === item.actor_id);
     return {
       id: item.id,
@@ -333,12 +422,16 @@ export async function loadNotifications(userId: string): Promise<LabNotification
       readAt: item.read_at,
     };
   });
+  notificationsCache.set(userId, { value: notifications, expiresAt: Date.now() + DATA_CACHE_MS });
+  return notifications;
 }
 
 export async function ensureDailyStreakReminder() {
+  if (Date.now() - reminderCheckedAt < 60_000) return;
   const supabase = createClient();
   const { error } = await supabase.rpc("ensure_my_daily_streak_reminder");
   if (error && error.code !== "PGRST202") throw error;
+  reminderCheckedAt = Date.now();
 }
 
 export async function markNotificationsRead(userId: string, notificationIds: string[]) {
@@ -349,4 +442,13 @@ export async function markNotificationsRead(userId: string, notificationIds: str
     .eq("recipient_id", userId)
     .in("id", notificationIds);
   if (error) throw error;
+  const cached = validCache(notificationsCache.get(userId));
+  if (cached) {
+    const ids = new Set(notificationIds);
+    const readAt = new Date().toISOString();
+    notificationsCache.set(userId, {
+      value: cached.map((item) => ids.has(item.id) ? { ...item, readAt } : item),
+      expiresAt: Date.now() + DATA_CACHE_MS,
+    });
+  }
 }

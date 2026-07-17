@@ -9,7 +9,7 @@ import {
   calculateCurrentStreak,
   getPostStatus,
   loadActiveMissions,
-  loadDailyPosts,
+  loadCalendarPosts,
   seoulDateKey,
   type DailyPost,
   type Mission,
@@ -44,10 +44,10 @@ export default function CalendarPage() {
         router.replace("/login");
         return;
       }
-      const [loadedPosts, activeMissions] = await Promise.all([loadDailyPosts(), loadActiveMissions(currentUser.id)]);
+      const [loadedPosts, activeMissions] = await Promise.all([loadCalendarPosts(currentUser.id), loadActiveMissions(currentUser.id)]);
       if (cancelled) return;
       setUser(currentUser);
-      setPosts(loadedPosts.filter((post) => post.memberId === currentUser.id));
+      setPosts(loadedPosts);
       setMissions(activeMissions);
       setIsLoading(false);
     }).catch(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -11,6 +11,11 @@ const navItems = [
   { id: "calendar", href: "/calendar", icon: "▦", label: "캘린더" },
   { id: "team", href: "/update#team", icon: "♟", label: "팀원" },
 ] as const;
+
+function NavPendingIndicator() {
+  const { pending } = useLinkStatus();
+  return <span aria-hidden className={`absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-current transition-opacity ${pending ? "animate-pulse opacity-100" : "opacity-0"}`} />;
+}
 
 export default function FloatingNav() {
   const pathname = usePathname();
@@ -36,9 +41,10 @@ export default function FloatingNav() {
       {navItems.map((item) => {
         const active = isActive(item.id);
         return (
-          <Link key={item.id} href={item.href} title={item.label} aria-current={active ? "page" : undefined} onClick={() => setHash(item.href.includes("#") ? `#${item.href.split("#")[1]}` : "")} className={`flex h-11 items-center rounded-[1rem] transition ${active ? "bg-[#ffd84d] text-stone-950 shadow-sm" : "text-white/55 hover:bg-white/10 hover:text-white"}`}>
+          <Link key={item.id} href={item.href} title={item.label} aria-current={active ? "page" : undefined} onClick={() => setHash(item.href.includes("#") ? `#${item.href.split("#")[1]}` : "")} className={`relative flex h-11 items-center rounded-[1rem] transition ${active ? "bg-[#ffd84d] text-stone-950 shadow-sm" : "text-white/55 hover:bg-white/10 hover:text-white"}`}>
             <span className="flex h-11 w-11 shrink-0 items-center justify-center text-lg font-black">{item.icon}</span>
             <span className="hidden overflow-hidden whitespace-nowrap pr-3 text-xs font-black opacity-0 transition-opacity duration-200 group-hover:opacity-100 md:block">{item.label}</span>
+            <NavPendingIndicator />
           </Link>
         );
       })}

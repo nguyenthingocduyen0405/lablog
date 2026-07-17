@@ -6,7 +6,7 @@ import {
   countMissionUpdateDays,
   hasMissionUpdateToday,
   missionPointsForDuration,
-  type DailyPost,
+  type MissionActivity,
   type Mission,
 } from "../lib/lab-social";
 
@@ -18,11 +18,11 @@ const missionPresets = [
 
 type MissionPanelProps = {
   missions: Mission[];
-  posts: DailyPost[];
+  posts: MissionActivity[];
   onMissionAdded: (mission: Mission) => void;
 };
 
-function MissionProgress({ mission, posts }: { mission: Mission; posts: DailyPost[] }) {
+function MissionProgress({ mission, posts }: { mission: Mission; posts: MissionActivity[] }) {
   const updatedDays = useMemo(() => countMissionUpdateDays(posts, mission.id), [mission.id, posts]);
   const updatedToday = hasMissionUpdateToday(posts, mission.id);
   const progress = Math.min(100, Math.round((updatedDays / mission.durationDays) * 100));
