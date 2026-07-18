@@ -182,6 +182,9 @@ export type OnlineMeeting = {
   roomName: string;
   startsAt: string;
   endedAt: string | null;
+  notes: string;
+  notesUpdatedAt: string | null;
+  notesUpdatedBy: string | null;
   createdAt: string;
 };
 
@@ -297,6 +300,9 @@ function mapOnlineMeeting(row: Record<string, string | number | null>): OnlineMe
     roomName: String(row.room_name),
     startsAt: String(row.starts_at),
     endedAt: typeof row.ended_at === "string" ? row.ended_at : null,
+    notes: typeof row.meeting_notes === "string" ? row.meeting_notes : "",
+    notesUpdatedAt: typeof row.notes_updated_at === "string" ? row.notes_updated_at : null,
+    notesUpdatedBy: typeof row.notes_updated_by === "string" ? row.notes_updated_by : null,
     createdAt: String(row.created_at),
   };
 }
@@ -418,7 +424,7 @@ export async function loadOnlineMeetings(projectId: string): Promise<OnlineMeeti
   if (cached) return cached;
   const supabase = createClient();
   const { data, error } = await supabase.from("online_meetings")
-    .select("id,creator_id,project_id,title,description,room_name,starts_at,ended_at,created_at")
+    .select("id,creator_id,project_id,title,description,room_name,starts_at,ended_at,meeting_notes,notes_updated_at,notes_updated_by,created_at")
     .eq("project_id", projectId)
     .is("ended_at", null)
     .order("starts_at", { ascending: false })
@@ -428,6 +434,30 @@ export async function loadOnlineMeetings(projectId: string): Promise<OnlineMeeti
   const meetings = (data ?? []).map(mapOnlineMeeting);
   onlineMeetingsCache.set(projectId, { value: meetings, expiresAt: Date.now() + DATA_CACHE_MS });
   return meetings;
+}
+
+export async function loadProjectMeetingHistory(projectId: string): Promise<OnlineMeeting[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("online_meetings")
+    .select("id,creator_id,project_id,title,description,room_name,starts_at,ended_at,meeting_notes,notes_updated_at,notes_updated_by,created_at")
+    .eq("project_id", projectId)
+    .not("ended_at", "is", null)
+    .order("ended_at", { ascending: false })
+    .limit(30);
+  if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
+  if (error) throw error;
+  return (data ?? []).map(mapOnlineMeeting);
+}
+
+export async function saveProjectMeetingNotes(meetingId: string, notes: string): Promise<OnlineMeeting> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("save_project_meeting_notes", {
+    target_meeting_id: meetingId,
+    notes_content: notes,
+  });
+  if (error) throw error;
+  onlineMeetingsCache.clear();
+  return mapOnlineMeeting(data);
 }
 
 export async function startProjectMeeting(projectId: string, title: string): Promise<OnlineMeeting> {
