@@ -69,8 +69,9 @@ export default function LabTourPage() {
       setMembers((current) => current.map((member) => member.id === user.id ? { ...member, labSeat: selectedSeat } : member));
       setUser({ ...user, labSeat: selectedSeat });
       startIntroductions();
-    } catch {
-      setSeatMessage("이 자리는 방금 다른 멤버가 선택했어요. 다른 빈 자리를 골라 주세요.");
+    } catch (error) {
+      const missingColumn = typeof error === "object" && error !== null && "code" in error && error.code === "42703";
+      setSeatMessage(missingColumn ? "데이터베이스 업데이트가 필요해요. lab_seat migration을 먼저 실행해 주세요." : "이 자리는 방금 다른 멤버가 선택했어요. 다른 빈 자리를 골라 주세요.");
       const loadedMembers = await loadLabMembers().catch(() => members);
       setMembers(loadedMembers);
     } finally {
