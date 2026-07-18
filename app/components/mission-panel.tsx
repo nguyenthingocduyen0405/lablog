@@ -9,6 +9,7 @@ import {
   type MissionActivity,
   type Mission,
 } from "../lib/lab-social";
+import MissionCollaboration from "./mission-collaboration";
 
 const missionPresets = [
   { title: "하루 1편 논문 · 1주 연속", durationDays: 7, emoji: "📄", color: "bg-[#d9ff72]" },
@@ -17,6 +18,7 @@ const missionPresets = [
 ] as const;
 
 type MissionPanelProps = {
+  currentUserId: string;
   missions: Mission[];
   posts: MissionActivity[];
   onMissionAdded: (mission: Mission) => void;
@@ -49,7 +51,7 @@ function MissionProgress({ mission, posts }: { mission: Mission; posts: MissionA
   );
 }
 
-export default function MissionPanel({ missions, posts, onMissionAdded }: MissionPanelProps) {
+export default function MissionPanel({ currentUserId, missions, posts, onMissionAdded }: MissionPanelProps) {
   const [showChooser, setShowChooser] = useState(missions.length === 0);
   const [showCustom, setShowCustom] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -95,6 +97,7 @@ export default function MissionPanel({ missions, posts, onMissionAdded }: Missio
         </div>
 
         {missions.length > 0 ? <div className="mt-5 grid gap-3 md:grid-cols-2">{missions.map((mission) => <MissionProgress key={mission.id} mission={mission} posts={posts} />)}</div> : <div className="mt-5 rounded-2xl border border-dashed border-white/20 px-5 py-8 text-center text-sm font-bold text-white/40">아직 진행 중인 미션이 없어요.</div>}
+        <MissionCollaboration currentUserId={currentUserId} missions={missions} onMissionAccepted={onMissionAdded} />
       </div>
 
       {showChooser && (

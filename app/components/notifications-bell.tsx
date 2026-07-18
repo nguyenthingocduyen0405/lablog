@@ -55,10 +55,12 @@ export default function NotificationsBell({ userId }: { userId: string }) {
                 <p className="mt-3 text-sm font-bold text-stone-400">{"\uC544\uC9C1 \uC0C8 \uC54C\uB9BC\uC774 \uC5C6\uC5B4\uC694."}</p>
               </div>
             ) : notifications.map((item) => (
-              <Link key={item.id} href={item.type.endsWith("_reminder") ? "/update#new-post" : `/update#post-${item.postId}`} onClick={() => setIsOpen(false)} className="flex gap-3 border-b border-stone-100 px-4 py-4 transition last:border-0 hover:bg-[#fff9df]">
+              <Link key={item.id} href={item.type === "mission_invite" ? "/mission" : item.type.endsWith("_reminder") ? "/update#new-post" : `/update#post-${item.postId}`} onClick={() => setIsOpen(false)} className="flex gap-3 border-b border-stone-100 px-4 py-4 transition last:border-0 hover:bg-[#fff9df]">
                 {item.type.endsWith("_reminder") ? <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffd84d] text-xl">{item.type === "streak_reminder" ? "🔥" : "🎯"}</span> : <CharacterAvatar config={item.actorAvatarConfig} background={item.actorAvatarBackground} name={item.actorName} size={40} />}
                 <span className="min-w-0 text-sm leading-5">
-                  {item.type === "mission_reminder" ? (
+                  {item.type === "mission_invite" ? (
+                    <><span className="font-black">{item.actorName}</span><span className="block text-stone-600">{item.missionTitle} 미션에 함께하자고 초대했어요.</span></>
+                  ) : item.type === "mission_reminder" ? (
                     <>
                       <span className="font-black">{item.missionTitle}</span>
                       <span className="block text-stone-600">{"\uC624\uB298 \uC544\uC9C1 \uC5C5\uB370\uC774\uD2B8\uAC00 \uC5C6\uC5B4\uC694. \uC798\uD558\uACE0 \uC788\uC5B4?"}</span>
