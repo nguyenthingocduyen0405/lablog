@@ -562,6 +562,16 @@ export async function createTeamProject(
   return mapTeamProject(data);
 }
 
+export async function renameTeamProject(projectId: string, name: string): Promise<TeamProject> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("rename_team_project", {
+    target_project_id: projectId,
+    project_name: name,
+  });
+  if (error) throw error;
+  return mapTeamProject(data);
+}
+
 export async function loadTeamProjectTasks(projectId: string): Promise<TeamProjectTask[]> {
   const supabase = createClient();
   const { data, error } = await supabase.from("team_project_tasks")

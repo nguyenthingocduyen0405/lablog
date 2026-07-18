@@ -20,6 +20,7 @@ import {
   loadTeamProjects,
   loadTeamProjectTasks,
   respondToTeamProjectInvite,
+  renameTeamProject,
   saveProjectMeetingNotes,
   setTeamProjectTaskCompleted,
   startProjectMeeting,
@@ -69,6 +70,8 @@ export default function MeetingPage() {
   const notesDirtyRef = useRef(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [isRenamingProject, setIsRenamingProject] = useState(false);
+  const [projectNameDraft, setProjectNameDraft] = useState("");
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -188,6 +191,27 @@ export default function MeetingPage() {
     finally { setIsSaving(false); }
   }
 
+  function beginProjectRename() {
+    if (!selectedProject || !isHost) return;
+    setProjectNameDraft(selectedProject.name);
+    setIsRenamingProject(true);
+  }
+
+  async function submitProjectRename(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedProject || !isHost || isSaving) return;
+    const nextName = projectNameDraft.trim();
+    if (!nextName || nextName === selectedProject.name) { setIsRenamingProject(false); return; }
+    setIsSaving(true); setMessage("");
+    try {
+      const renamed = await renameTeamProject(selectedProject.id, nextName);
+      setProjects((current) => current.map((project) => project.id === renamed.id ? renamed : project));
+      setIsRenamingProject(false);
+      setMessage("프로젝트 이름을 변경했어요.");
+    } catch { setMessage("프로젝트 이름을 변경하지 못했어요."); }
+    finally { setIsSaving(false); }
+  }
+
   async function submitTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedProject || !isHost || isSaving) return;
@@ -280,10 +304,10 @@ export default function MeetingPage() {
         {invites.length > 0 && <section className="mt-7 rounded-[1.75rem] bg-[#ffd84d] p-5"><p className="text-[10px] font-black uppercase tracking-[.18em] text-stone-600">PROJECT INVITES · {invites.length}</p><div className="mt-3 grid gap-3 md:grid-cols-2">{invites.map((invite) => <article key={invite.project.id} className="rounded-2xl bg-white/75 p-4 ring-1 ring-black/10"><p className="text-xs font-bold text-stone-500">{invite.hostName}님이 초대했어요</p><h2 className="mt-1 text-lg font-black">{invite.project.name}</h2><p className="mt-2 text-xs font-semibold text-stone-500">마감 {formatDate(invite.project.deadline)} · 완료 보상 {invite.project.rewardPoints}P</p><div className="mt-4 flex gap-2"><button type="button" disabled={isSaving} onClick={() => respond(invite, "accepted")} className="rounded-full bg-stone-950 px-4 py-2 text-xs font-black text-white">참여하기</button><button type="button" disabled={isSaving} onClick={() => respond(invite, "declined")} className="rounded-full bg-white px-4 py-2 text-xs font-black text-stone-500">거절</button></div></article>)}</div></section>}
 
         <div className="mt-8 grid gap-5 lg:grid-cols-[18rem_1fr]">
-          <aside className="h-fit rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-black/[0.05]"><div className="flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-violet-500">MY PROJECTS</p><h2 className="mt-1 text-xl font-black">프로젝트</h2></div><span className="rounded-full bg-violet-100 px-3 py-1.5 text-xs font-black text-violet-700">{projects.length}</span></div><div className="mt-4 space-y-2">{projects.length === 0 ? <p className="rounded-2xl border border-dashed border-stone-200 px-4 py-10 text-center text-xs font-bold text-stone-400">아직 Team Project가 없어요.</p> : projects.map((project) => <button key={project.id} type="button" onClick={() => setSelectedProjectId(project.id)} className={`w-full rounded-2xl p-4 text-left transition ${selectedProjectId === project.id ? "bg-stone-950 text-white" : "bg-[#f8f6f1] hover:bg-stone-100"}`}><span className="flex items-center justify-between gap-2"><span className="text-sm font-black">{project.name}</span><span className={`text-[9px] font-black ${project.status === "completed" ? "text-emerald-400" : "text-[#ffd84d]"}`}>{project.status === "completed" ? "DONE" : `${project.rewardPoints}P`}</span></span><span className={`mt-2 block text-[11px] font-semibold ${selectedProjectId === project.id ? "text-white/45" : "text-stone-400"}`}>마감 {formatDate(project.deadline)}</span></button>)}</div></aside>
+          <aside className="h-fit rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-black/[0.05]"><div className="flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-violet-500">MY PROJECTS</p><h2 className="mt-1 text-xl font-black">프로젝트</h2></div><span className="rounded-full bg-violet-100 px-3 py-1.5 text-xs font-black text-violet-700">{projects.length}</span></div><div className="mt-4 space-y-2">{projects.length === 0 ? <p className="rounded-2xl border border-dashed border-stone-200 px-4 py-10 text-center text-xs font-bold text-stone-400">아직 Team Project가 없어요.</p> : projects.map((project) => <button key={project.id} type="button" onClick={() => { setSelectedProjectId(project.id); setIsRenamingProject(false); }} className={`w-full rounded-2xl p-4 text-left transition ${selectedProjectId === project.id ? "bg-stone-950 text-white" : "bg-[#f8f6f1] hover:bg-stone-100"}`}><span className="flex items-center justify-between gap-2"><span className="text-sm font-black">{project.name}</span><span className={`text-[9px] font-black ${project.status === "completed" ? "text-emerald-400" : "text-[#ffd84d]"}`}>{project.status === "completed" ? "DONE" : `${project.rewardPoints}P`}</span></span><span className={`mt-2 block text-[11px] font-semibold ${selectedProjectId === project.id ? "text-white/45" : "text-stone-400"}`}>마감 {formatDate(project.deadline)}</span></button>)}</div></aside>
 
           <section>{selectedProject ? <div className="space-y-5">
-            <div className="overflow-hidden rounded-[2rem] bg-[#201d18] text-white shadow-[0_22px_70px_rgba(38,32,22,.16)]"><div className="p-5 sm:p-7"><div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-300">{selectedProject.status === "completed" ? "COMPLETED PROJECT" : isHost ? "HOST PROJECT" : "MEMBER PROJECT"}</p><h2 className="mt-2 text-3xl font-black tracking-[-.04em]">{selectedProject.name}</h2><p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/45">{selectedProject.description || "팀원들과 목표를 공유하고 함께 진행해요."}</p></div><div className="flex shrink-0 gap-2"><span className="rounded-full bg-white/10 px-3 py-2 text-xs font-black text-[#ffd84d]">🏆 {selectedProject.rewardPoints}P / 인</span><span className={`rounded-full px-3 py-2 text-xs font-black ${selectedProject.status === "completed" ? "bg-emerald-300 text-emerald-950" : "bg-white/10 text-white/55"}`}>{selectedProject.status === "completed" ? "✓ 완료" : `마감 ${formatDate(selectedProject.deadline)}`}</span></div></div>
+            <div className="overflow-hidden rounded-[2rem] bg-[#201d18] text-white shadow-[0_22px_70px_rgba(38,32,22,.16)]"><div className="p-5 sm:p-7"><div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0 flex-1"><p className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-300">{selectedProject.status === "completed" ? "COMPLETED PROJECT" : isHost ? "HOST PROJECT" : "MEMBER PROJECT"}</p>{isRenamingProject ? <form onSubmit={submitProjectRename} className="mt-2 flex max-w-xl items-center gap-2"><input autoFocus value={projectNameDraft} onChange={(event) => setProjectNameDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setIsRenamingProject(false); }} required maxLength={100} aria-label="새 프로젝트 이름" className="min-w-0 flex-1 rounded-xl bg-white/10 px-3 py-2 text-2xl font-black text-white outline-none ring-2 ring-[#ffd84d] placeholder:text-white/25" /><button type="submit" disabled={isSaving} className="rounded-full bg-emerald-300 px-3 py-2 text-xs font-black text-emerald-950">저장</button><button type="button" onClick={() => setIsRenamingProject(false)} className="rounded-full bg-white/10 px-3 py-2 text-xs font-black text-white/60">취소</button></form> : <div className="mt-2 flex items-center gap-2"><h2 className="min-w-0 truncate text-3xl font-black tracking-[-.04em]">{selectedProject.name}</h2>{isHost && <button type="button" onClick={beginProjectRename} aria-label="프로젝트 이름 변경" title="프로젝트 이름 변경" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-lg text-[#ffd84d] transition hover:bg-white/20">✎</button>}</div>}<p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/45">{selectedProject.description || "팀원들과 목표를 공유하고 함께 진행해요."}</p></div><div className="flex shrink-0 gap-2"><span className="rounded-full bg-white/10 px-3 py-2 text-xs font-black text-[#ffd84d]">🏆 {selectedProject.rewardPoints}P / 인</span><span className={`rounded-full px-3 py-2 text-xs font-black ${selectedProject.status === "completed" ? "bg-emerald-300 text-emerald-950" : "bg-white/10 text-white/55"}`}>{selectedProject.status === "completed" ? "✓ 완료" : `마감 ${formatDate(selectedProject.deadline)}`}</span></div></div>
               <div className="mt-7 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl bg-white/[0.07] p-4"><p className="text-[10px] font-black text-white/35">PROGRESS</p><p className="mt-2 text-2xl font-black">{progress}%</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-emerald-300 transition-all" style={{ width: `${progress}%` }} /></div></div><div className="rounded-2xl bg-white/[0.07] p-4"><p className="text-[10px] font-black text-white/35">TASKS</p><p className="mt-2 text-2xl font-black">{completedCount}<span className="text-sm text-white/30"> / {tasks.length}</span></p><p className="mt-3 text-xs font-bold text-white/35">완료한 업무</p></div><div className="rounded-2xl bg-white/[0.07] p-4"><p className="text-[10px] font-black text-white/35">TEAM</p><p className="mt-2 text-2xl font-black">{acceptedMembers.length}명</p><div className="mt-3 flex -space-x-2">{acceptedMembers.slice(0, 6).map((item) => <CharacterAvatar key={item.userId} config={item.member.avatarConfig} background={item.member.avatarBackground} name={item.member.name} size={28} className="ring-2 ring-[#201d18]" />)}</div></div></div>
             </div></div>
 
