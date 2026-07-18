@@ -50,7 +50,7 @@ export default function MissionPage() {
           <p className="max-w-sm text-sm font-semibold leading-6 text-stone-400 sm:text-right">여러 미션을 함께 진행할 수 있어요. 시작한 미션은 종료일까지 유지되며, 각 업데이트는 하나의 미션에 기록됩니다.</p>
         </div>
 
-        <MissionPanel currentUserId={user.id} missions={missions} posts={posts} onMissionAdded={(mission) => setMissions((current) => current.some((item) => item.id === mission.id) ? current : [mission, ...current])} />
+        <MissionPanel missions={missions} posts={posts} onMissionAdded={(mission) => setMissions((current) => current.some((item) => item.id === mission.id) ? current : [mission, ...current])} />
 
         {message && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{message}</p>}
 

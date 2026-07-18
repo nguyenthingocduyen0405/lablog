@@ -9,7 +9,7 @@ const navItems = [
   { id: "feed", href: "/update#feed", icon: "✦", label: "피드" },
   { id: "mission", href: "/mission", icon: "◎", label: "미션" },
   { id: "calendar", href: "/calendar", icon: "▦", label: "캘린더" },
-  { id: "meeting", href: "/meeting", icon: "◉", label: "온라인 미팅" },
+  { id: "meeting", href: "/meeting", icon: "◉", label: "Team Project" },
   { id: "team", href: "/update#team", icon: "♟", label: "팀원" },
 ] as const;
 
@@ -32,6 +32,7 @@ export default function FloatingNav() {
   function isActive(id: (typeof navItems)[number]["id"]) {
     if (id === "calendar") return pathname === "/calendar";
     if (id === "mission") return pathname === "/mission";
+    if (id === "meeting") return pathname === "/meeting";
     if (id === "team") return pathname.startsWith("/members/") || (pathname === "/update" && hash === "#team");
     if (id === "feed") return pathname === "/update" && hash === "#feed";
     return pathname === "/update" && hash !== "#feed" && hash !== "#team";

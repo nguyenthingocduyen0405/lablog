@@ -135,7 +135,7 @@ export type PostComment = {
 
 export type LabNotification = {
   id: string;
-  type: "reaction" | "comment" | "streak_reminder" | "mission_reminder" | "mission_invite" | "team_project_invite";
+  type: "reaction" | "comment" | "streak_reminder" | "mission_reminder" | "team_project_invite";
   emoji: string | null;
   commentPreview: string | null;
   postId: string | null;
@@ -242,20 +242,6 @@ export type Mission = {
   endsOn: string;
   active: boolean;
   createdAt: string;
-};
-
-export type MissionInvite = {
-  mission: Mission;
-  inviterId: string;
-  inviterName: string;
-  createdAt: string;
-};
-
-export type MissionParticipant = {
-  missionId: string;
-  userId: string;
-  status: "invited" | "accepted";
-  member: LabMember;
 };
 
 function mapMission(row: Record<string, string | number | boolean>): Mission {
@@ -679,109 +665,17 @@ export async function loadActiveMissions(userId: string): Promise<Mission[]> {
   const cached = validCache(activeMissionsCache.get(userId));
   if (cached) return cached;
   const supabase = createClient();
-  const { data: ownedData, error: ownedError } = await supabase.from("missions")
+  const { data, error } = await supabase.from("missions")
     .select("id,user_id,title,duration_days,points_per_update,started_on,ends_on,active,created_at")
     .eq("user_id", userId)
     .eq("active", true)
     .gte("ends_on", seoulDateKey(new Date()))
     .order("created_at", { ascending: false })
     .limit(20);
-  if (ownedError && ownedError.code !== "PGRST205") throw ownedError;
-
-  const { data: participantData, error: participantError } = await supabase.from("mission_participants")
-    .select("mission_id")
-    .eq("user_id", userId)
-    .eq("status", "accepted");
-  if (participantError && !["PGRST205", "42P01"].includes(participantError.code)) throw participantError;
-  const sharedIds = [...new Set((participantData ?? []).map((item) => item.mission_id))];
-  let sharedData: Record<string, string | number | boolean>[] = [];
-  if (sharedIds.length > 0) {
-    const sharedResult = await supabase.from("missions")
-      .select("id,user_id,title,duration_days,points_per_update,started_on,ends_on,active,created_at")
-      .in("id", sharedIds)
-      .eq("active", true)
-      .gte("ends_on", seoulDateKey(new Date()));
-    if (sharedResult.error) throw sharedResult.error;
-    sharedData = sharedResult.data ?? [];
-  }
-  const missionRows = [...(ownedData ?? []), ...sharedData].filter((mission, index, rows) => rows.findIndex((item) => item.id === mission.id) === index);
-  const missions = missionRows.map(mapMission).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  if (error && error.code !== "PGRST205") throw error;
+  const missions = (data ?? []).map(mapMission);
   activeMissionsCache.set(userId, { value: missions, expiresAt: Date.now() + DATA_CACHE_MS });
   return missions;
-}
-
-export async function loadMissionInvites(userId: string): Promise<MissionInvite[]> {
-  const supabase = createClient();
-  const { data: participantData, error } = await supabase.from("mission_participants")
-    .select("mission_id,invited_by,created_at")
-    .eq("user_id", userId)
-    .eq("status", "invited")
-    .order("created_at", { ascending: false });
-  if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
-  if (error) throw error;
-  const rows = participantData ?? [];
-  if (rows.length === 0) return [];
-  const missionIds = [...new Set(rows.map((item) => item.mission_id))];
-  const inviterIds = [...new Set(rows.map((item) => item.invited_by))];
-  const [missionResult, profileResult] = await Promise.all([
-    supabase.from("missions").select("id,user_id,title,duration_days,points_per_update,started_on,ends_on,active,created_at").in("id", missionIds),
-    supabase.from("profiles").select("id,name").in("id", inviterIds),
-  ]);
-  if (missionResult.error) throw missionResult.error;
-  if (profileResult.error) throw profileResult.error;
-  return rows.flatMap((row) => {
-    const missionRow = (missionResult.data ?? []).find((mission) => mission.id === row.mission_id);
-    if (!missionRow) return [];
-    const inviter = (profileResult.data ?? []).find((profile) => profile.id === row.invited_by);
-    return [{ mission: mapMission(missionRow), inviterId: row.invited_by, inviterName: inviter?.name ?? "Lab member", createdAt: row.created_at }];
-  });
-}
-
-export async function loadMissionParticipants(missionIds: string[]): Promise<MissionParticipant[]> {
-  if (missionIds.length === 0) return [];
-  const supabase = createClient();
-  const { data, error } = await supabase.from("mission_participants")
-    .select("mission_id,user_id,status")
-    .in("mission_id", missionIds)
-    .in("status", ["invited", "accepted"]);
-  if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
-  if (error) throw error;
-  const rows = data ?? [];
-  const userIds = [...new Set(rows.map((item) => item.user_id))];
-  if (userIds.length === 0) return [];
-  const profiles = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config,lab_seat").in("id", userIds);
-  if (profiles.error) throw profiles.error;
-  return rows.flatMap((row) => {
-    const profile = (profiles.data ?? []).find((item) => item.id === row.user_id);
-    if (!profile) return [];
-    return [{ missionId: row.mission_id, userId: row.user_id, status: row.status as "invited" | "accepted", member: {
-      id: profile.id,
-      name: profile.name,
-      role: profile.role,
-      status: profile.status,
-      initials: profile.initials,
-      avatarBackground: profile.avatar_background,
-      avatarConfig: mapAvatarConfig(profile.avatar_config),
-      labSeat: typeof profile.lab_seat === "number" ? profile.lab_seat : null,
-    } }];
-  });
-}
-
-export async function inviteMembersToMission(missionId: string, userIds: string[]) {
-  if (userIds.length === 0) return 0;
-  const supabase = createClient();
-  const { data, error } = await supabase.rpc("invite_members_to_mission", { target_mission_id: missionId, invited_user_ids: userIds });
-  if (error) throw error;
-  notificationsCache.clear();
-  return Number(data ?? 0);
-}
-
-export async function respondToMissionInvite(missionId: string, response: "accepted" | "declined", userId: string) {
-  const supabase = createClient();
-  const { error } = await supabase.rpc("respond_to_mission_invite", { target_mission_id: missionId, response_status: response });
-  if (error) throw error;
-  activeMissionsCache.delete(userId);
-  notificationsCache.delete(userId);
 }
 
 export async function loadActiveMission(userId: string): Promise<Mission | null> {
@@ -870,12 +764,14 @@ export async function loadNotifications(userId: string): Promise<LabNotification
   let { data, error } = await supabase.from("notifications")
     .select("id,type,emoji,comment_preview,post_id,actor_id,mission_id,mission_title,project_id,project_title,created_at,read_at")
     .eq("recipient_id", userId)
+    .neq("type", "mission_invite")
     .order("created_at", { ascending: false })
     .limit(30);
   if (error?.code === "42703") {
     const fallback = await supabase.from("notifications")
       .select("id,type,emoji,comment_preview,post_id,actor_id,mission_id,mission_title,created_at,read_at")
       .eq("recipient_id", userId)
+      .neq("type", "mission_invite")
       .order("created_at", { ascending: false })
       .limit(30);
     data = fallback.data?.map((item) => ({ ...item, project_id: null, project_title: null })) ?? null;
