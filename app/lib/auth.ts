@@ -31,6 +31,7 @@ function mapProfile(profile: Record<string, unknown>, email = ""): AuthUser {
     status: String(profile.status ?? ""),
     avatarBackground: String(profile.avatar_background ?? "linear-gradient(135deg, #ffd84d, #ff8a4c)"),
     avatarConfig: mapAvatarConfig(profile.avatar_config),
+    labSeat: typeof profile.lab_seat === "number" ? profile.lab_seat : null,
     onboardingCompletedAt: typeof profile.onboarding_completed_at === "string" ? profile.onboarding_completed_at : null,
   };
 }
@@ -69,7 +70,12 @@ async function fetchCurrentUser(): Promise<AuthUser | null> {
     await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
     return null;
   }
-  const { data: profile, error: profileError } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config,onboarding_completed_at").eq("id", authData.user.id).single();
+  let { data: profile, error: profileError } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config,lab_seat,onboarding_completed_at").eq("id", authData.user.id).single();
+  if (profileError?.code === "42703") {
+    const fallback = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config,onboarding_completed_at").eq("id", authData.user.id).single();
+    profile = fallback.data ? { ...fallback.data, lab_seat: null } : null;
+    profileError = fallback.error;
+  }
   if (profileError) {
     if (profileError.code === "PGRST116") await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
     return null;

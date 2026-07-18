@@ -44,6 +44,7 @@ export type LabMember = {
   status: string;
   avatarBackground: string;
   avatarConfig: AvatarConfig;
+  labSeat: number | null;
 };
 
 export const POST_STATUSES = [
@@ -236,7 +237,12 @@ export async function loadLabMembers(): Promise<LabMember[]> {
   const cached = validCache(membersCache);
   if (cached) return cached;
   const supabase = createClient();
-  const { data, error } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config").order("created_at");
+  let { data, error } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config,lab_seat").order("created_at");
+  if (error?.code === "42703") {
+    const fallback = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config").order("created_at");
+    data = fallback.data?.map((profile) => ({ ...profile, lab_seat: null })) ?? null;
+    error = fallback.error;
+  }
   if (error) throw error;
   const members = (data ?? []).map((profile) => ({
     id: profile.id,
@@ -246,9 +252,18 @@ export async function loadLabMembers(): Promise<LabMember[]> {
     initials: profile.initials,
     avatarBackground: profile.avatar_background,
     avatarConfig: mapAvatarConfig(profile.avatar_config),
+    labSeat: typeof profile.lab_seat === "number" ? profile.lab_seat : null,
   }));
   membersCache = { value: members, expiresAt: Date.now() + DATA_CACHE_MS };
   return members;
+}
+
+export async function saveLabSeat(userId: string, labSeat: number) {
+  if (!Number.isInteger(labSeat) || labSeat < 0 || labSeat > 7) throw new Error("Invalid lab seat");
+  const supabase = createClient();
+  const { error } = await supabase.from("profiles").update({ lab_seat: labSeat }).eq("id", userId);
+  if (error) throw error;
+  membersCache = null;
 }
 
 export async function saveAvatarConfig(userId: string, avatarConfig: AvatarConfig) {

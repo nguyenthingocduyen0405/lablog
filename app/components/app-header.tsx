@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { logoutAccount, type AuthUser } from "../lib/auth";
 import CharacterAvatar from "./character-avatar";
 import FloatingNav from "./floating-nav";
+import LabMapDialog from "./lab-map-dialog";
 import NotificationsBell from "./notifications-bell";
 
 export default function AppHeader({ user }: { user: AuthUser }) {
   const router = useRouter();
+  const [isMapOpen, setIsMapOpen] = useState(false);
 
   return (
     <>
@@ -20,6 +23,7 @@ export default function AppHeader({ user }: { user: AuthUser }) {
         </Link>
 
         <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setIsMapOpen(true)} aria-label="2.5D 랩 지도 열기" className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3 text-xs font-black text-stone-600 shadow-sm ring-1 ring-black/[0.06] transition hover:-translate-y-0.5 hover:text-stone-950"><span aria-hidden="true">🗺️</span><span className="hidden sm:inline">랩 지도</span></button>
           <NotificationsBell userId={user.id} />
           <Link href={`/members/${user.id}`} aria-label="Profile" className="rounded-[.85rem] shadow-sm ring-2 ring-white">
             <CharacterAvatar config={user.avatarConfig} background={user.avatarBackground} name={user.name} size={40} />
@@ -31,6 +35,7 @@ export default function AppHeader({ user }: { user: AuthUser }) {
         </div>
       </header>
       <FloatingNav />
+      {isMapOpen && <LabMapDialog user={user} onClose={() => setIsMapOpen(false)} />}
     </>
   );
 }
