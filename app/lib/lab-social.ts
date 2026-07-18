@@ -443,7 +443,7 @@ export async function loadProjectMeetingHistory(projectId: string): Promise<Onli
     .eq("project_id", projectId)
     .not("ended_at", "is", null)
     .order("ended_at", { ascending: false })
-    .limit(30);
+    .limit(1);
   if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
   if (error) throw error;
   return (data ?? []).map(mapOnlineMeeting);
