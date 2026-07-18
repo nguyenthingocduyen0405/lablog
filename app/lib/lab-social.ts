@@ -109,7 +109,7 @@ const calendarPostsCache = new Map<string, CacheEntry<DailyPost[]>>();
 const activeMissionsCache = new Map<string, CacheEntry<Mission[]>>();
 const notificationsCache = new Map<string, CacheEntry<LabNotification[]>>();
 let calendarEventsCache: CacheEntry<CalendarEvent[]> | null = null;
-let onlineMeetingsCache: CacheEntry<OnlineMeeting[]> | null = null;
+const onlineMeetingsCache = new Map<string, CacheEntry<OnlineMeeting[]>>();
 let reminderCheckedAt = 0;
 
 function validCache<T>(entry: CacheEntry<T> | null | undefined) {
@@ -135,13 +135,15 @@ export type PostComment = {
 
 export type LabNotification = {
   id: string;
-  type: "reaction" | "comment" | "streak_reminder" | "mission_reminder" | "mission_invite";
+  type: "reaction" | "comment" | "streak_reminder" | "mission_reminder" | "mission_invite" | "team_project_invite";
   emoji: string | null;
   commentPreview: string | null;
   postId: string | null;
   actorId: string | null;
   missionId: string | null;
   missionTitle: string | null;
+  projectId: string | null;
+  projectTitle: string | null;
   actorName: string;
   actorInitials: string;
   actorAvatarBackground: string;
@@ -174,11 +176,35 @@ export type CalendarEvent = {
 export type OnlineMeeting = {
   id: string;
   creatorId: string;
+  projectId: string;
   title: string;
   description: string;
   roomName: string;
   startsAt: string;
-  durationMinutes: number;
+  endedAt: string | null;
+  createdAt: string;
+};
+
+export type TeamProject = {
+  id: string;
+  ownerId: string;
+  name: string;
+  description: string;
+  active: boolean;
+  createdAt: string;
+};
+
+export type TeamProjectMember = {
+  projectId: string;
+  userId: string;
+  role: "host" | "member";
+  status: "invited" | "accepted";
+  member: LabMember;
+};
+
+export type TeamProjectInvite = {
+  project: TeamProject;
+  hostName: string;
   createdAt: string;
 };
 
@@ -259,15 +285,27 @@ function mapCalendarEvent(row: Record<string, string>): CalendarEvent {
   };
 }
 
-function mapOnlineMeeting(row: Record<string, string | number>): OnlineMeeting {
+function mapOnlineMeeting(row: Record<string, string | number | null>): OnlineMeeting {
   return {
     id: String(row.id),
     creatorId: String(row.creator_id),
+    projectId: String(row.project_id),
     title: String(row.title),
     description: String(row.description),
     roomName: String(row.room_name),
     startsAt: String(row.starts_at),
-    durationMinutes: Number(row.duration_minutes),
+    endedAt: typeof row.ended_at === "string" ? row.ended_at : null,
+    createdAt: String(row.created_at),
+  };
+}
+
+function mapTeamProject(row: Record<string, string | boolean>): TeamProject {
+  return {
+    id: String(row.id),
+    ownerId: String(row.owner_id),
+    name: String(row.name),
+    description: String(row.description),
+    active: Boolean(row.active),
     createdAt: String(row.created_at),
   };
 }
@@ -355,42 +393,119 @@ export async function deleteCalendarEvent(eventId: string, userId: string) {
   calendarEventsCache = null;
 }
 
-export async function loadOnlineMeetings(): Promise<OnlineMeeting[]> {
-  const cached = validCache(onlineMeetingsCache);
+export async function loadOnlineMeetings(projectId: string): Promise<OnlineMeeting[]> {
+  const cached = validCache(onlineMeetingsCache.get(projectId));
   if (cached) return cached;
   const supabase = createClient();
-  const cutoff = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase.from("online_meetings")
-    .select("id,creator_id,title,description,room_name,starts_at,duration_minutes,created_at")
-    .gte("starts_at", cutoff)
-    .order("starts_at", { ascending: true })
-    .limit(100);
+    .select("id,creator_id,project_id,title,description,room_name,starts_at,ended_at,created_at")
+    .eq("project_id", projectId)
+    .is("ended_at", null)
+    .order("starts_at", { ascending: false })
+    .limit(1);
   if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
   if (error) throw error;
   const meetings = (data ?? []).map(mapOnlineMeeting);
-  onlineMeetingsCache = { value: meetings, expiresAt: Date.now() + DATA_CACHE_MS };
+  onlineMeetingsCache.set(projectId, { value: meetings, expiresAt: Date.now() + DATA_CACHE_MS });
   return meetings;
 }
 
-export async function createOnlineMeeting(input: { creatorId: string; title: string; description: string; startsAt: string; durationMinutes: number }): Promise<OnlineMeeting> {
+export async function startProjectMeeting(projectId: string, title: string): Promise<OnlineMeeting> {
   const supabase = createClient();
-  const { data, error } = await supabase.from("online_meetings").insert({
-    creator_id: input.creatorId,
-    title: input.title,
-    description: input.description,
-    starts_at: input.startsAt,
-    duration_minutes: input.durationMinutes,
-  }).select("id,creator_id,title,description,room_name,starts_at,duration_minutes,created_at").single();
+  const { data, error } = await supabase.rpc("start_project_meeting", { target_project_id: projectId, meeting_title: title });
   if (error) throw error;
-  onlineMeetingsCache = null;
+  onlineMeetingsCache.delete(projectId);
   return mapOnlineMeeting(data);
 }
 
-export async function deleteOnlineMeeting(meetingId: string, creatorId: string) {
+export async function endProjectMeeting(meetingId: string, projectId: string) {
   const supabase = createClient();
-  const { error } = await supabase.from("online_meetings").delete().eq("id", meetingId).eq("creator_id", creatorId);
+  const { error } = await supabase.rpc("end_project_meeting", { target_meeting_id: meetingId });
   if (error) throw error;
-  onlineMeetingsCache = null;
+  onlineMeetingsCache.delete(projectId);
+}
+
+export async function loadTeamProjects(userId: string): Promise<TeamProject[]> {
+  const supabase = createClient();
+  const { data: memberRows, error } = await supabase.from("team_project_members")
+    .select("project_id")
+    .eq("user_id", userId)
+    .eq("status", "accepted");
+  if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
+  if (error) throw error;
+  const projectIds = [...new Set((memberRows ?? []).map((row) => row.project_id))];
+  if (projectIds.length === 0) return [];
+  const projects = await supabase.from("team_projects")
+    .select("id,owner_id,name,description,active,created_at")
+    .in("id", projectIds)
+    .eq("active", true)
+    .order("created_at", { ascending: false });
+  if (projects.error) throw projects.error;
+  return (projects.data ?? []).map(mapTeamProject);
+}
+
+export async function loadTeamProjectInvites(userId: string): Promise<TeamProjectInvite[]> {
+  const supabase = createClient();
+  const { data: rows, error } = await supabase.from("team_project_members")
+    .select("project_id,invited_by,created_at")
+    .eq("user_id", userId)
+    .eq("status", "invited")
+    .order("created_at", { ascending: false });
+  if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
+  if (error) throw error;
+  if (!rows?.length) return [];
+  const projectIds = [...new Set(rows.map((row) => row.project_id))];
+  const hostIds = [...new Set(rows.map((row) => row.invited_by))];
+  const [projects, hosts] = await Promise.all([
+    supabase.from("team_projects").select("id,owner_id,name,description,active,created_at").in("id", projectIds),
+    supabase.from("profiles").select("id,name").in("id", hostIds),
+  ]);
+  if (projects.error) throw projects.error;
+  if (hosts.error) throw hosts.error;
+  return rows.flatMap((row) => {
+    const projectRow = (projects.data ?? []).find((project) => project.id === row.project_id);
+    if (!projectRow) return [];
+    const host = (hosts.data ?? []).find((profile) => profile.id === row.invited_by);
+    return [{ project: mapTeamProject(projectRow), hostName: host?.name ?? "Lab member", createdAt: row.created_at }];
+  });
+}
+
+export async function loadTeamProjectMembers(projectIds: string[]): Promise<TeamProjectMember[]> {
+  if (projectIds.length === 0) return [];
+  const supabase = createClient();
+  const { data: rows, error } = await supabase.from("team_project_members")
+    .select("project_id,user_id,role,status")
+    .in("project_id", projectIds)
+    .in("status", ["invited", "accepted"]);
+  if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
+  if (error) throw error;
+  const userIds = [...new Set((rows ?? []).map((row) => row.user_id))];
+  if (userIds.length === 0) return [];
+  const profiles = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config,lab_seat").in("id", userIds);
+  if (profiles.error) throw profiles.error;
+  return (rows ?? []).flatMap((row) => {
+    const profile = (profiles.data ?? []).find((item) => item.id === row.user_id);
+    if (!profile) return [];
+    return [{ projectId: row.project_id, userId: row.user_id, role: row.role as "host" | "member", status: row.status as "invited" | "accepted", member: {
+      id: profile.id, name: profile.name, role: profile.role, status: profile.status, initials: profile.initials,
+      avatarBackground: profile.avatar_background, avatarConfig: mapAvatarConfig(profile.avatar_config), labSeat: typeof profile.lab_seat === "number" ? profile.lab_seat : null,
+    } }];
+  });
+}
+
+export async function createTeamProject(name: string, description: string, invitedUserIds: string[]): Promise<TeamProject> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("create_team_project", { project_name: name, project_description: description, invited_user_ids: invitedUserIds });
+  if (error) throw error;
+  notificationsCache.clear();
+  return mapTeamProject(data);
+}
+
+export async function respondToTeamProjectInvite(projectId: string, response: "accepted" | "declined", userId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("respond_to_team_project_invite", { target_project_id: projectId, response_status: response });
+  if (error) throw error;
+  notificationsCache.delete(userId);
 }
 
 export async function createDailyPost(
@@ -752,11 +867,20 @@ export async function loadNotifications(userId: string): Promise<LabNotification
   const cached = validCache(notificationsCache.get(userId));
   if (cached) return cached;
   const supabase = createClient();
-  const { data, error } = await supabase.from("notifications")
-    .select("id,type,emoji,comment_preview,post_id,actor_id,mission_id,mission_title,created_at,read_at")
+  let { data, error } = await supabase.from("notifications")
+    .select("id,type,emoji,comment_preview,post_id,actor_id,mission_id,mission_title,project_id,project_title,created_at,read_at")
     .eq("recipient_id", userId)
     .order("created_at", { ascending: false })
     .limit(30);
+  if (error?.code === "42703") {
+    const fallback = await supabase.from("notifications")
+      .select("id,type,emoji,comment_preview,post_id,actor_id,mission_id,mission_title,created_at,read_at")
+      .eq("recipient_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    data = fallback.data?.map((item) => ({ ...item, project_id: null, project_title: null })) ?? null;
+    error = fallback.error;
+  }
   if (error) throw error;
   const rows = data ?? [];
   const actorIds = [...new Set(rows.map((item) => item.actor_id).filter((id): id is string => Boolean(id)))];
@@ -775,6 +899,8 @@ export async function loadNotifications(userId: string): Promise<LabNotification
       actorId: item.actor_id,
       missionId: item.mission_id,
       missionTitle: item.mission_title,
+      projectId: item.project_id,
+      projectTitle: item.project_title,
       actorName: actor?.name ?? "Lab member",
       actorInitials: actor?.initials ?? "LB",
       actorAvatarBackground: actor?.avatar_background ?? "linear-gradient(135deg, #ffd84d, #ff8a4c)",
