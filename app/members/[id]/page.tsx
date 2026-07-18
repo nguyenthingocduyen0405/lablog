@@ -78,7 +78,7 @@ export default function MemberProfilePage() {
 
   return (
     <main className="min-h-screen bg-[#f5f3ee] pb-24 text-stone-950 md:pb-0">
-      <header className="border-b border-black/[0.06] bg-[#f5f3ee]/90 backdrop-blur-xl">
+      <header className="relative z-[60] border-b border-black/[0.06] bg-[#f5f3ee]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-8">
           <Link href="/update#feed" className="flex items-center gap-2 text-sm font-black transition hover:-translate-x-1">{"\u2190 \uB7A9 \uD53C\uB4DC"}</Link>
           <Link href="/" className="text-lg font-black tracking-[-0.04em]">LABLOG</Link>
