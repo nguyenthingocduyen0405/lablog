@@ -15,6 +15,7 @@ import {
   loadCalendarEvents,
   loadDailyPosts,
   loadLabMembers,
+  loadTeamProjectRewardTotal,
   type DailyPost,
   type CalendarEvent,
   type LabMember,
@@ -27,6 +28,7 @@ export default function MemberProfilePage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [members, setMembers] = useState<LabMember[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [teamProjectScore, setTeamProjectScore] = useState(0);
   const member = members.find((item) => item.id === id);
 
   useEffect(() => {
@@ -36,15 +38,18 @@ export default function MemberProfilePage() {
         router.replace("/login");
         return;
       }
-      const [loadedMembers, loadedPosts, loadedCalendarEvents] = await Promise.all([loadLabMembers(), loadDailyPosts(), loadCalendarEvents().catch(() => [])]);
+      const [loadedMembers, loadedPosts, loadedCalendarEvents, loadedTeamProjectScore] = await Promise.all([
+        loadLabMembers(), loadDailyPosts(), loadCalendarEvents().catch(() => []), loadTeamProjectRewardTotal(id).catch(() => 0),
+      ]);
       if (cancelled) return;
       setCurrentUser(user);
       setMembers(loadedMembers);
       setLocalPosts(loadedPosts);
       setCalendarEvents(loadedCalendarEvents);
+      setTeamProjectScore(loadedTeamProjectScore);
     }).catch(() => router.replace("/login"));
     return () => { cancelled = true; };
-  }, [router]);
+  }, [id, router]);
 
   const memberPosts = useMemo(
     () => [...localPosts]
@@ -57,8 +62,8 @@ export default function MemberProfilePage() {
     [id, localPosts],
   );
   const totalScore = useMemo(
-    () => memberPosts.reduce((sum, post) => sum + post.scoreAwarded, 0),
-    [memberPosts],
+    () => memberPosts.reduce((sum, post) => sum + post.scoreAwarded, 0) + teamProjectScore,
+    [memberPosts, teamProjectScore],
   );
 
   if (!currentUser) {

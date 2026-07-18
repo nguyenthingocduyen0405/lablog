@@ -190,7 +190,23 @@ export type TeamProject = {
   ownerId: string;
   name: string;
   description: string;
+  deadline: string;
+  rewardPoints: number;
+  status: "active" | "completed";
+  completedAt: string | null;
   active: boolean;
+  createdAt: string;
+};
+
+export type TeamProjectTask = {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  assigneeId: string;
+  dueOn: string;
+  completed: boolean;
+  completedAt: string | null;
   createdAt: string;
 };
 
@@ -285,13 +301,31 @@ function mapOnlineMeeting(row: Record<string, string | number | null>): OnlineMe
   };
 }
 
-function mapTeamProject(row: Record<string, string | boolean>): TeamProject {
+function mapTeamProject(row: Record<string, string | number | boolean | null>): TeamProject {
   return {
     id: String(row.id),
     ownerId: String(row.owner_id),
     name: String(row.name),
     description: String(row.description),
+    deadline: String(row.deadline),
+    rewardPoints: Number(row.reward_points),
+    status: row.status === "completed" ? "completed" : "active",
+    completedAt: typeof row.completed_at === "string" ? row.completed_at : null,
     active: Boolean(row.active),
+    createdAt: String(row.created_at),
+  };
+}
+
+function mapTeamProjectTask(row: Record<string, string | boolean | null>): TeamProjectTask {
+  return {
+    id: String(row.id),
+    projectId: String(row.project_id),
+    title: String(row.title),
+    description: String(row.description),
+    assigneeId: String(row.assignee_id),
+    dueOn: String(row.due_on),
+    completed: Boolean(row.completed),
+    completedAt: typeof row.completed_at === "string" ? row.completed_at : null,
     createdAt: String(row.created_at),
   };
 }
@@ -422,9 +456,8 @@ export async function loadTeamProjects(userId: string): Promise<TeamProject[]> {
   const projectIds = [...new Set((memberRows ?? []).map((row) => row.project_id))];
   if (projectIds.length === 0) return [];
   const projects = await supabase.from("team_projects")
-    .select("id,owner_id,name,description,active,created_at")
+    .select("id,owner_id,name,description,deadline,reward_points,status,completed_at,active,created_at")
     .in("id", projectIds)
-    .eq("active", true)
     .order("created_at", { ascending: false });
   if (projects.error) throw projects.error;
   return (projects.data ?? []).map(mapTeamProject);
@@ -443,7 +476,7 @@ export async function loadTeamProjectInvites(userId: string): Promise<TeamProjec
   const projectIds = [...new Set(rows.map((row) => row.project_id))];
   const hostIds = [...new Set(rows.map((row) => row.invited_by))];
   const [projects, hosts] = await Promise.all([
-    supabase.from("team_projects").select("id,owner_id,name,description,active,created_at").in("id", projectIds),
+    supabase.from("team_projects").select("id,owner_id,name,description,deadline,reward_points,status,completed_at,active,created_at").in("id", projectIds),
     supabase.from("profiles").select("id,name").in("id", hostIds),
   ]);
   if (projects.error) throw projects.error;
@@ -479,12 +512,88 @@ export async function loadTeamProjectMembers(projectIds: string[]): Promise<Team
   });
 }
 
-export async function createTeamProject(name: string, description: string, invitedUserIds: string[]): Promise<TeamProject> {
+export async function createTeamProject(
+  name: string,
+  description: string,
+  deadline: string,
+  rewardPoints: number,
+  invitedUserIds: string[],
+): Promise<TeamProject> {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc("create_team_project", { project_name: name, project_description: description, invited_user_ids: invitedUserIds });
+  const { data, error } = await supabase.rpc("create_team_project", {
+    project_name: name,
+    project_description: description,
+    project_deadline: deadline,
+    project_reward_points: rewardPoints,
+    invited_user_ids: invitedUserIds,
+  });
   if (error) throw error;
   notificationsCache.clear();
   return mapTeamProject(data);
+}
+
+export async function loadTeamProjectTasks(projectId: string): Promise<TeamProjectTask[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("team_project_tasks")
+    .select("id,project_id,title,description,assignee_id,due_on,completed,completed_at,created_at")
+    .eq("project_id", projectId)
+    .order("completed", { ascending: true })
+    .order("due_on", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
+  if (error) throw error;
+  return (data ?? []).map(mapTeamProjectTask);
+}
+
+export async function createTeamProjectTask(input: {
+  projectId: string;
+  title: string;
+  description: string;
+  assigneeId: string;
+  dueOn: string;
+}): Promise<TeamProjectTask> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("create_team_project_task", {
+    target_project_id: input.projectId,
+    task_title: input.title,
+    task_description: input.description,
+    task_assignee_id: input.assigneeId,
+    task_due_on: input.dueOn,
+  });
+  if (error) throw error;
+  return mapTeamProjectTask(data);
+}
+
+export async function setTeamProjectTaskCompleted(taskId: string, completed: boolean): Promise<TeamProjectTask> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("set_team_project_task_completed", {
+    target_task_id: taskId,
+    is_completed: completed,
+  });
+  if (error) throw error;
+  return mapTeamProjectTask(data);
+}
+
+export async function deleteTeamProjectTask(taskId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("delete_team_project_task", { target_task_id: taskId });
+  if (error) throw error;
+}
+
+export async function completeTeamProject(projectId: string): Promise<TeamProject> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("complete_team_project", { target_project_id: projectId });
+  if (error) throw error;
+  notificationsCache.clear();
+  return mapTeamProject(data);
+}
+
+export async function loadTeamProjectRewardTotal(userId: string): Promise<number> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("get_team_project_reward_total", { target_user_id: userId });
+  if (error && ["PGRST202", "42883"].includes(error.code)) return 0;
+  if (error) throw error;
+  return Number(data ?? 0);
 }
 
 export async function respondToTeamProjectInvite(projectId: string, response: "accepted" | "declined", userId: string) {
