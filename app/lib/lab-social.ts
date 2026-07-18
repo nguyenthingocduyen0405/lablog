@@ -109,6 +109,7 @@ const calendarPostsCache = new Map<string, CacheEntry<DailyPost[]>>();
 const activeMissionsCache = new Map<string, CacheEntry<Mission[]>>();
 const notificationsCache = new Map<string, CacheEntry<LabNotification[]>>();
 let calendarEventsCache: CacheEntry<CalendarEvent[]> | null = null;
+let onlineMeetingsCache: CacheEntry<OnlineMeeting[]> | null = null;
 let reminderCheckedAt = 0;
 
 function validCache<T>(entry: CacheEntry<T> | null | undefined) {
@@ -167,6 +168,17 @@ export type CalendarEvent = {
   category: CalendarEventCategory;
   startsOn: string;
   endsOn: string;
+  createdAt: string;
+};
+
+export type OnlineMeeting = {
+  id: string;
+  creatorId: string;
+  title: string;
+  description: string;
+  roomName: string;
+  startsAt: string;
+  durationMinutes: number;
   createdAt: string;
 };
 
@@ -244,6 +256,19 @@ function mapCalendarEvent(row: Record<string, string>): CalendarEvent {
     startsOn: row.starts_on,
     endsOn: row.ends_on,
     createdAt: row.created_at,
+  };
+}
+
+function mapOnlineMeeting(row: Record<string, string | number>): OnlineMeeting {
+  return {
+    id: String(row.id),
+    creatorId: String(row.creator_id),
+    title: String(row.title),
+    description: String(row.description),
+    roomName: String(row.room_name),
+    startsAt: String(row.starts_at),
+    durationMinutes: Number(row.duration_minutes),
+    createdAt: String(row.created_at),
   };
 }
 
@@ -328,6 +353,44 @@ export async function deleteCalendarEvent(eventId: string, userId: string) {
   const { error } = await supabase.from("calendar_events").delete().eq("id", eventId).eq("user_id", userId);
   if (error) throw error;
   calendarEventsCache = null;
+}
+
+export async function loadOnlineMeetings(): Promise<OnlineMeeting[]> {
+  const cached = validCache(onlineMeetingsCache);
+  if (cached) return cached;
+  const supabase = createClient();
+  const cutoff = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase.from("online_meetings")
+    .select("id,creator_id,title,description,room_name,starts_at,duration_minutes,created_at")
+    .gte("starts_at", cutoff)
+    .order("starts_at", { ascending: true })
+    .limit(100);
+  if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
+  if (error) throw error;
+  const meetings = (data ?? []).map(mapOnlineMeeting);
+  onlineMeetingsCache = { value: meetings, expiresAt: Date.now() + DATA_CACHE_MS };
+  return meetings;
+}
+
+export async function createOnlineMeeting(input: { creatorId: string; title: string; description: string; startsAt: string; durationMinutes: number }): Promise<OnlineMeeting> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("online_meetings").insert({
+    creator_id: input.creatorId,
+    title: input.title,
+    description: input.description,
+    starts_at: input.startsAt,
+    duration_minutes: input.durationMinutes,
+  }).select("id,creator_id,title,description,room_name,starts_at,duration_minutes,created_at").single();
+  if (error) throw error;
+  onlineMeetingsCache = null;
+  return mapOnlineMeeting(data);
+}
+
+export async function deleteOnlineMeeting(meetingId: string, creatorId: string) {
+  const supabase = createClient();
+  const { error } = await supabase.from("online_meetings").delete().eq("id", meetingId).eq("creator_id", creatorId);
+  if (error) throw error;
+  onlineMeetingsCache = null;
 }
 
 export async function createDailyPost(

@@ -9,6 +9,7 @@ const navItems = [
   { id: "feed", href: "/update#feed", icon: "✦", label: "피드" },
   { id: "mission", href: "/mission", icon: "◎", label: "미션" },
   { id: "calendar", href: "/calendar", icon: "▦", label: "캘린더" },
+  { id: "meeting", href: "/meeting", icon: "◉", label: "온라인 미팅" },
   { id: "team", href: "/update#team", icon: "♟", label: "팀원" },
 ] as const;
 
