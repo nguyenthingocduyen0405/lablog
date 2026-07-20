@@ -8,7 +8,7 @@ import { getCurrentUser } from "../lib/auth";
 const navItems = [
   { id: "update", href: "/update#new-post", icon: "✎", label: "업데이트", requiresChapterTwo: true },
   { id: "feed", href: "/update#feed", icon: "✦", label: "피드", requiresChapterTwo: true },
-  { id: "mission", href: "/mission", icon: "◎", label: "미션", requiresChapterTwo: false },
+  { id: "mission", href: "/mission", icon: "◎", label: "미션", requiresChapterTwo: true },
   { id: "calendar", href: "/calendar", icon: "▦", label: "캘린더", requiresChapterTwo: false },
   { id: "meeting", href: "/meeting", icon: "◉", label: "Project", requiresChapterTwo: false },
   { id: "team", href: "/update#team", icon: "♟", label: "팀원", requiresChapterTwo: true },
@@ -48,7 +48,7 @@ export default function FloatingNav() {
     {navItems.map((item) => {
       const locked = item.requiresChapterTwo && !chapterTwoCompleted;
       const active = !locked && isActive(item.id);
-      const href = locked ? "/labquest?chapter=2&locked=update" : item.href;
+      const href = locked ? `/labquest?chapter=2&locked=${item.id}` : item.href;
       const title = locked ? `${item.label} · Chapter 2 완료 후 오픈` : item.label;
       return <Link key={item.id} href={href} title={title} aria-current={active ? "page" : undefined} onClick={() => setHash(!locked && item.href.includes("#") ? `#${item.href.split("#")[1]}` : "")} className={`relative flex h-11 items-center rounded-[1rem] transition ${active ? "bg-[#ffd84d] text-stone-950 shadow-sm" : locked ? "text-white/25 hover:bg-white/[.06] hover:text-white/45" : "text-white/55 hover:bg-white/10 hover:text-white"}`}>
         <span className="relative flex h-11 w-11 shrink-0 items-center justify-center text-lg font-black">{item.icon}{locked && <span className="absolute right-1 top-1 text-[9px]">🔒</span>}</span>

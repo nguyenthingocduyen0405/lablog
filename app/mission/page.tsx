@@ -22,6 +22,10 @@ export default function MissionPage() {
         router.replace("/login");
         return;
       }
+      if (!currentUser.chapterTwoCompletedAt) {
+        router.replace("/labquest?chapter=2&locked=mission");
+        return;
+      }
       const [activeMissions, loadedPosts] = await Promise.all([
         loadActiveMissions(currentUser.id),
         loadMissionActivity(currentUser.id),

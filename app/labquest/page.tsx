@@ -69,7 +69,7 @@ export default function LabQuestChapterOnePage() {
     setError("");
     try {
       if (!user.onboardingCompletedAt) await completeOnboarding(user.id);
-      router.replace("/mission");
+      router.replace("/");
     } catch {
       setScreen("complete");
       setError("진행 상황을 저장하지 못했습니다. 다시 시도해 주세요.");
@@ -77,7 +77,7 @@ export default function LabQuestChapterOnePage() {
   }
 
   if (screen === "loading" || !user) return <Loading />;
-  if (screen === "c2") return <ChapterTwo userId={user.id} chapterCompleted={Boolean(user.chapterTwoCompletedAt)} onBackToLabLog={() => router.push(user.chapterTwoCompletedAt ? "/update" : "/mission")} onUnlocked={async () => { if (!user.onboardingCompletedAt) await completeOnboarding(user.id); await completeChapterTwo(user.id); setUser({ ...user, onboardingCompletedAt: user.onboardingCompletedAt ?? new Date().toISOString(), chapterTwoCompletedAt: new Date().toISOString() }); }} />;
+  if (screen === "c2") return <ChapterTwo userId={user.id} chapterCompleted={Boolean(user.chapterTwoCompletedAt)} onBackToLabLog={() => router.push("/")} onUnlocked={async () => { if (!user.onboardingCompletedAt) await completeOnboarding(user.id); await completeChapterTwo(user.id); setUser({ ...user, onboardingCompletedAt: user.onboardingCompletedAt ?? new Date().toISOString(), chapterTwoCompletedAt: new Date().toISOString() }); }} />;
   if (screen === "intro") return <Intro onBack={() => router.push("/lab-tour")} onStart={() => setScreen("m1")} />;
   if (screen === "map") return <ChapterMap completed={completed} onSelect={(number) => setScreen(`m${number}` as Screen)} />;
   if (screen === "m1") return <MissionOne onDone={() => setScreen("r1")} onMap={() => setScreen("map")} />;

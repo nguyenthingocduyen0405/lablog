@@ -33,10 +33,10 @@ export async function updateSession(request: NextRequest) {
 
   if (!isAuthenticated && isProtectedPage) return NextResponse.redirect(new URL("/login", request.url));
   if (isAuthenticated && isAuthPage) return NextResponse.redirect(new URL("/", request.url));
-  if (isAuthenticated && path === "/update" && !chapterTwoCompleted) {
+  if (isAuthenticated && (path === "/update" || path === "/mission") && !chapterTwoCompleted) {
     const destination = new URL("/labquest", request.url);
     destination.searchParams.set("chapter", "2");
-    destination.searchParams.set("locked", "update");
+    destination.searchParams.set("locked", path.slice(1));
     return NextResponse.redirect(destination);
   }
   return response;
