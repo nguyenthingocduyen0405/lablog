@@ -147,21 +147,75 @@ function MissionOne({ onDone, onMap }: MissionProps) {
 }
 
 const PROCESSES = [
-  { id: "P1", name: "논문 PDF 분석", burst: 5 }, { id: "P2", name: "센서 로그 저장", burst: 2 },
-  { id: "P3", name: "실험 영상 처리", burst: 7 }, { id: "P4", name: "결과 그래프 생성", burst: 3 },
+  { id: "P1", name: "논문 PDF 분석", burst: 5, color: "#f08cc7" },
+  { id: "P2", name: "센서 로그 저장", burst: 2, color: "#71dca8" },
+  { id: "P3", name: "실험 영상 처리", burst: 7, color: "#8da5ff" },
+  { id: "P4", name: "결과 그래프 생성", burst: 3, color: "#ffd06b" },
 ];
 function MissionTwo({ onDone, onMap }: MissionProps) {
-  const [order, setOrder] = useState<string[]>([]); const [errors, setErrors] = useState(0); const [feedback, setFeedback] = useState("CPU Burst가 가장 짧은 프로세스를 선택하세요.");
-  const remaining = PROCESSES.filter((p) => !order.includes(p.id));
-  function select(id: string) { const shortest = [...remaining].sort((a, b) => a.burst - b.burst)[0]; if (id !== shortest.id) { setErrors((v) => v + 1); return setFeedback(`${shortest.id}의 CPU Burst가 더 짧아요.`); } setOrder((v) => [...v, id]); setFeedback(`${id} 선택 완료! 다음으로 짧은 프로세스를 찾으세요.`); }
-  return <MissionShell number={2} title="CPU Scheduling" subtitle="비선점형 SJF 알고리즘으로 실행 순서를 완성하세요." onMap={onMap} status={`오류 ${errors}`}>
-    <div className="grid gap-3 sm:grid-cols-2">{PROCESSES.map((p) => <Choice key={p.id} done={order.includes(p.id)} onClick={() => select(p.id)} title={`${p.id} · ${p.name}`} subtitle={`CPU Burst ${p.burst}ms`} badge={p.id} />)}</div>
-    <div className="mt-6 rounded-2xl bg-white/[.04] p-5"><Tag>EXECUTION QUEUE</Tag><div className="mt-3 flex min-h-14 flex-wrap gap-2">{order.map((id, i) => <span key={id} className="rounded-xl bg-cyan-300/15 px-4 py-3 font-black text-cyan-200">{i + 1}. {id}</span>)}</div></div>
-    <Feedback>{feedback}</Feedback>
-    {order.length === 4 && <Primary onClick={onDone}>결과 제출하기 →</Primary>}
-  </MissionShell>;
+  const [order, setOrder] = useState<string[]>([]);
+  const [errors, setErrors] = useState(0);
+  const [feedback, setFeedback] = useState("가장 짧은 CPU Burst를 가진 프로세스를 선택하세요.");
+  const remaining = PROCESSES.filter((process) => !order.includes(process.id));
+  const complete = order.length === PROCESSES.length;
+
+  function select(process: (typeof PROCESSES)[number]) {
+    if (complete) return;
+    const shortest = [...remaining].sort((a, b) => a.burst - b.burst)[0];
+    if (process.id !== shortest.id) {
+      setErrors((value) => value + 1);
+      setFeedback(`${process.id}보다 CPU Burst가 짧은 프로세스가 Ready Queue에 있어요.`);
+      return;
+    }
+    setOrder((value) => [...value, process.id]);
+    setFeedback(`${process.id}가 CPU에 배치되었습니다. 다음 프로세스를 선택하세요.`);
+  }
+
+  return <main className="min-h-screen bg-[radial-gradient(circle_at_78%_12%,#2a426d,transparent_28%),linear-gradient(#081326,#0c1b30_65%,#0b2024)] text-white">
+    <header className="grid h-20 grid-cols-[7rem_1fr_auto] items-center gap-4 border-b border-[#8da5ff]/15 bg-[#07101e]/90 px-4 sm:px-8 lg:px-12">
+      <button onClick={onMap} className="rounded-full border border-white/15 bg-white/[.04] px-4 py-2 text-sm font-bold text-slate-300 hover:bg-white/10">← 지도</button>
+      <div className="flex flex-col"><small className="text-[10px] font-black tracking-[.16em] text-[#7d90b4]">OS LAB · MISSION 02</small><strong className="mt-1 text-lg">CPU 스케줄링</strong></div>
+      <span className="grid h-11 min-w-16 place-items-center rounded-full border border-[#73dfa8]/35 bg-[#73dfa8]/10 text-sm font-black text-[#73dfa8]">{order.length}/4</span>
+    </header>
+
+    <section className="mx-auto w-[min(1080px,calc(100%-2rem))] py-9 sm:py-12">
+      <div className="grid items-end gap-7 md:grid-cols-[1fr_auto]">
+        <div><p className="text-xs font-black tracking-[.18em] text-[#8da5ff]">SHORTEST JOB FIRST</p><h1 className="mt-3 text-4xl font-black leading-[1.04] tracking-[-.055em] sm:text-6xl">CPU가 먼저 처리할<br /><em className="not-italic text-[#73dfa8]">프로세스</em>를 선택하세요</h1><p className="mt-5 text-base font-semibold leading-7 text-[#aab8d0]">CPU Burst가 짧은 작업부터 실행하면 평균 대기 시간을 줄일 수 있어요.</p></div>
+        <div className="min-w-44 rounded-2xl border border-[#ffd06b]/25 bg-[#ffd06b]/[.05] p-5"><small className="text-[10px] font-black tracking-[.14em] text-[#b7a16f]">ERRORS</small><strong className="mt-1 block text-3xl text-[#ffd06b]">{errors}</strong><span className="mt-2 block text-xs font-bold text-[#8998b2]">SJF · NON-PREEMPTIVE</span></div>
+      </div>
+
+      <div className="mt-8 grid items-stretch gap-4 lg:grid-cols-[1fr_5rem_16rem]">
+        <section className="rounded-[1.25rem] border border-[#8da5ff]/20 bg-[#091728]/90 p-5 shadow-[0_20px_50px_rgba(0,0,0,.2)]">
+          <ZoneTitle title="READY QUEUE" subtitle="WAITING PROCESSES" />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">{PROCESSES.map((process) => {
+            const processed = order.includes(process.id);
+            return <button key={process.id} disabled={processed} onClick={() => select(process)} style={{ borderColor: processed ? "#26384c" : `${process.color}73`, backgroundColor: processed ? "#07131f" : `${process.color}16` }} className={`grid min-h-24 grid-cols-[3rem_1fr_auto] items-center gap-3 rounded-2xl border p-3 text-left transition ${processed ? "cursor-default opacity-40 grayscale" : "hover:-translate-y-1"}`}>
+              <i style={{ backgroundColor: process.color }} className="grid h-11 w-11 place-items-center rounded-xl text-xs font-black not-italic text-[#182239]">{processed ? "✓" : process.id}</i>
+              <span className="min-w-0"><strong className="block truncate text-sm sm:text-base">{process.name}</strong><small className="mt-1 block text-xs text-[#8191aa]">CPU Burst</small></span>
+              <b style={{ color: process.color }} className="text-2xl">{process.burst}<small className="ml-1 text-xs">ms</small></b>
+            </button>;
+          })}</div>
+        </section>
+
+        <div className="flex flex-col items-center justify-center text-[#8192ad]"><span className="text-4xl max-lg:rotate-90">→</span><small className="mt-1 text-[10px] font-black tracking-[.12em]">DISPATCH</small></div>
+
+        <section className="flex flex-col justify-center rounded-[1.25rem] border border-[#8da5ff]/20 bg-[#091728]/90 p-6 shadow-[0_20px_50px_rgba(0,0,0,.2)]">
+          <div className="relative flex h-40 flex-col items-center justify-center rounded-[1.4rem] border-8 border-[#58709e] bg-[repeating-linear-gradient(45deg,#18294a_0_10px,#1e3155_10px_20px)] shadow-[inset_0_0_0_2px_rgba(169,188,223,.2),0_12px_30px_rgba(0,0,0,.35)]"><small className="text-[10px] font-black tracking-[.16em] text-[#91a7d0]">OS LAB</small><strong className="my-1 font-mono text-5xl">CPU</strong><i className="rounded-lg bg-[#73dfa8]/10 px-3 py-1 text-xs font-black not-italic tracking-widest text-[#73dfa8]">{complete ? "DONE" : order.length ? order[order.length - 1] : "IDLE"}</i></div>
+          <div className="mt-6 flex flex-col text-center"><small className="text-[10px] font-black tracking-widest text-[#6b7c98]">RULE</small><strong className="mt-2 text-sm">가장 짧은 작업부터</strong><span className="mt-1 text-xs text-[#8191aa]">SJF · Non-preemptive</span></div>
+        </section>
+      </div>
+
+      <section className="mt-4 rounded-[1.25rem] border border-[#8da5ff]/20 bg-[#091728]/90 p-5 shadow-[0_20px_50px_rgba(0,0,0,.2)]">
+        <ZoneTitle title="EXECUTION TIMELINE" subtitle="COMPLETED ORDER" />
+        <div className="mt-4 flex min-h-20 items-stretch gap-2 overflow-hidden rounded-xl bg-[#06111e] p-1">{order.length === 0 ? <em className="m-auto text-sm not-italic text-[#5f718d]">프로세스를 선택하면 실행 순서가 여기에 표시됩니다.</em> : order.map((id, index) => { const process = PROCESSES.find((item) => item.id === id)!; return <div key={id} style={{ flexGrow: process.burst, backgroundColor: `${process.color}35`, borderBottomColor: process.color }} className="relative flex min-w-20 items-center justify-center gap-2 border-b-4"><b className="text-base">{id}</b><span style={{ color: process.color }} className="text-sm font-bold">{process.burst}ms</span><small className="absolute right-2 top-1 text-[10px] text-white/45">#{index + 1}</small></div>; })}</div>
+      </section>
+
+      <div className={`mt-4 flex min-h-20 flex-wrap items-center gap-4 rounded-2xl border p-4 ${complete ? "border-[#73dfa8]/30 bg-[#73dfa8]/[.06]" : "border-[#8da5ff]/20 bg-[#101c31]"}`}><i className={`grid h-10 w-10 place-items-center rounded-full text-sm font-black not-italic ${complete ? "bg-[#73dfa8] text-[#0a3b2a]" : "bg-[#8da5ff]/15 text-[#8da5ff]"}`}>{complete ? "✓" : "i"}</i><span className="flex flex-1 flex-col"><strong className="text-base">{complete ? "SJF 스케줄링 완료!" : feedback}</strong><small className="mt-1 text-sm text-[#8292ac]">{complete ? "실행 순서를 확인한 뒤 제출하세요." : "Ready Queue를 비교한 뒤 선택해 보세요."}</small></span>{complete && <button onClick={onDone} className="rounded-xl bg-gradient-to-r from-[#73dfa8] to-[#ffd06b] px-6 py-3 text-sm font-black text-[#0a3024] shadow-[0_5px_0_#174c39]">제출</button>}</div>
+    </section>
+  </main>;
 }
 
+function ZoneTitle({ title, subtitle }: { title: string; subtitle: string }) { return <div className="flex items-center justify-between"><span className="text-xs font-black tracking-[.14em] text-[#d2dcf2]">{title}</span><small className="text-[10px] font-black tracking-[.12em] text-[#62738e]">{subtitle}</small></div>; }
 const PAGE_TABLE: Record<number, string> = { 0: "Frame 3", 1: "Frame 0", 2: "Frame 1", 3: "Frame 2", 4: "Storage에서 가져오기" };
 const PAGE_TASKS = [0, 3, 4];
 function MissionThree({ onDone, onMap }: MissionProps) {
