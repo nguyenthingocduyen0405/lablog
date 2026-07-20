@@ -17,8 +17,8 @@ const PAIRS: Pair[] = [
 ];
 const RIGHT_ORDER = ["disk", "keyboard", "cpu", "network", "ram"];
 const MISSIONS = [
-  ["OS Abstraction", "하드웨어와 OS 추상화 연결", "+100 XP · Codex 이용권"],
-  ["CPU Scheduling", "SJF로 프로세스 실행 순서 결정", "+150 XP · ₩120,000 상품권"],
+  ["OS Abstraction", "하드웨어와 OS 추상화 연결", "Codex 이용권"],
+  ["CPU Scheduling", "SJF로 프로세스 실행 순서 결정", "₩150,000 상품권"],
   ["Memory Paging", "Page Table로 Frame 찾기", "랩 출입문 카드"],
   ["Disk Scheduling", "SSTF로 디스크 요청 처리", "Chapter 01 Clear"],
 ] as const;
@@ -106,10 +106,10 @@ function Intro({ onBack, onStart }: { onBack: () => void; onStart: () => void })
 }
 
 function ChapterMap({ completed, onSelect }: { completed: number[]; onSelect: (number: number) => void }) {
-  const xp = (completed.includes(1) ? 100 : 0) + (completed.includes(2) ? 150 : 0);
+
   return <Shell>
     <div className="mx-auto max-w-5xl">
-      <header className="flex items-start justify-between gap-5"><div><Tag>CHAPTER 01</Tag><h1 className="mt-2 text-4xl font-black sm:text-6xl">운영체제의 비밀 정원</h1><p className="mt-3 text-sm text-white/50">미션을 완료하면 다음 미션과 보상이 열립니다.</p></div><div className="rounded-2xl border border-cyan-200/15 bg-white/5 px-5 py-3 text-right"><small className="block text-[9px] font-black tracking-widest text-white/35">RESEARCH XP</small><strong className="text-2xl text-[#39ffb6]">{xp} XP</strong></div></header>
+      <header className="flex items-start justify-between gap-5"><div><Tag>CHAPTER 01</Tag><h1 className="mt-2 text-4xl font-black sm:text-6xl">운영체제의 비밀 정원</h1><p className="mt-3 text-sm text-white/50">미션을 완료하면 다음 미션과 보상이 열립니다.</p></div><div className="rounded-2xl border border-cyan-200/15 bg-white/5 px-5 py-3 text-right"><small className="block text-[9px] font-black tracking-widest text-white/35">CHAPTER PROGRESS</small><strong className="text-2xl text-[#39ffb6]">{completed.length} / 4</strong></div></header>
       <div className="mt-10 space-y-4">
         {MISSIONS.map((mission, index) => {
           const number = index + 1; const done = completed.includes(number); const unlocked = number === 1 || completed.includes(number - 1);
@@ -188,8 +188,8 @@ function MissionFour({ onDone, onMap }: MissionProps) {
   </MissionShell>;
 }
 
-function RewardOne({ onContinue }: { onContinue: () => void }) { return <Reward number={1} title="랩 Codex 이용권" accent="text-[#39ffb6]" onContinue={onContinue}><div className="rounded-[1.5rem] border border-[#39ffb6]/30 bg-[#39ffb6]/[.07] p-6"><Tag>CODEX / LAB PREMIUM ACCESS</Tag><strong className="mt-4 block text-4xl">+100 XP</strong><div className="mt-5 grid grid-cols-2 gap-3 text-xs"><Stat label="ACCURACY" value="100%" /><Stat label="NEXT STATUS" value="관리자 승인 대기" /></div></div><Note>랩 관리자 확인 후 계정 이용 권한이 활성화됩니다.</Note></Reward>; }
-function RewardTwo({ onContinue }: { onContinue: () => void }) { return <Reward number={2} title="₩120,000 상품권" accent="text-amber-300" onContinue={onContinue}><div className="rounded-[1.5rem] border border-amber-300/30 bg-amber-300/[.07] p-6"><Tag>REWARD VOUCHER</Tag><strong className="mt-4 block text-4xl text-amber-200">₩120,000</strong><div className="mt-5 grid grid-cols-2 gap-3 text-xs"><Stat label="RESEARCH XP" value="+150 XP" /><Stat label="ALGORITHM" value="SJF" /></div></div><Note>보상 지급은 랩 관리자 확인 후 진행됩니다.</Note></Reward>; }
+function RewardOne({ onContinue }: { onContinue: () => void }) { return <Reward number={1} title="랩 Codex 이용권" accent="text-[#39ffb6]" onContinue={onContinue}><div className="rounded-[1.5rem] border border-[#39ffb6]/30 bg-[#39ffb6]/[.07] p-6"><Tag>CODEX / LAB PREMIUM ACCESS</Tag><div className="mt-5 grid grid-cols-2 gap-3 text-xs"><Stat label="ACCURACY" value="100%" /><Stat label="NEXT STATUS" value="관리자 승인 대기" /></div></div><Note>랩 관리자 확인 후 계정 이용 권한이 활성화됩니다.</Note></Reward>; }
+function RewardTwo({ onContinue }: { onContinue: () => void }) { return <Reward number={2} title="₩150,000 상품권" accent="text-amber-300" onContinue={onContinue}><div className="rounded-[1.5rem] border border-amber-300/30 bg-amber-300/[.07] p-6"><Tag>REWARD VOUCHER</Tag><strong className="mt-4 block text-4xl text-amber-200">₩150,000</strong><div className="mt-5 grid grid-cols-2 gap-3 text-xs"><Stat label="ALGORITHM" value="SJF" /><Stat label="NEXT STATUS" value="관리자 승인 대기" /></div></div><Note>보상 지급은 랩 관리자 확인 후 진행됩니다.</Note></Reward>; }
 function RewardThree({ onContinue }: { onContinue: () => void }) { return <Reward number={3} title="랩 출입문 카드" accent="text-cyan-300" onContinue={onContinue}><div className="rounded-[1.5rem] border border-cyan-300/30 bg-gradient-to-br from-cyan-300/20 to-violet-400/10 p-6"><div className="flex justify-between text-[10px] font-black tracking-[.2em]"><span>OS LAB / ACCESS</span><span>LAB</span></div><strong className="mt-12 block text-2xl">MEMBER AUTHORIZED</strong><p className="mt-2 text-sm tracking-[.4em] text-white/45">•••• 03</p></div><p className="mt-4 text-sm font-bold text-cyan-200">랩 출입 권한이 활성화되었습니다.</p><Note>실물 카드 지급은 랩 관리자 확인 후 진행됩니다.</Note></Reward>; }
 
 function Reward({ number, title, accent, children, onContinue }: { number: number; title: string; accent: string; children: React.ReactNode; onContinue: () => void }) { return <Shell center><section className="w-full max-w-4xl rounded-[2rem] border border-emerald-300/20 bg-[#0b1b2b] p-7 sm:p-10"><div className="flex justify-between text-[9px] font-black tracking-[.18em] text-white/35"><span>OS LAB · MISSION REPORT</span><span>{String(number).padStart(2, "0")} / COMPLETE</span></div><div className="mt-8 grid items-center gap-8 md:grid-cols-[1fr_.9fr]"><div><div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#39ffb6] text-2xl font-black text-[#07131f]">✓</div><Tag>MISSION SUCCESS</Tag><h1 className={`mt-3 text-5xl font-black tracking-[-.05em] ${accent}`}>{title}</h1><p className="mt-4 text-sm text-white/45">미션을 완료하고 새로운 보상을 획득했습니다.</p></div><div>{children}</div></div><Primary onClick={onContinue}>보상 확인 · 맵으로 →</Primary></section></Shell>; }
