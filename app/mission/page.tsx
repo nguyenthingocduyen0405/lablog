@@ -56,10 +56,14 @@ export default function MissionPage() {
 
         <div className="mt-8 flex items-center justify-between border-t border-black/[0.08] pt-6">
           <Link href="/" className="text-sm font-black text-stone-400 hover:text-stone-900">{"\u2190 \uC774\uC804"}</Link>
-          {missions.length > 0 ? (
+          {missions.length > 0 ? user.chapterTwoCompletedAt ? (
             <Link href="/update" className="group inline-flex items-center gap-4 rounded-full bg-stone-950 py-2.5 pl-6 pr-2.5 text-sm font-black text-white shadow-[0_7px_0_#c7a600] transition hover:-translate-y-0.5">
               {"\uC5C5\uB370\uC774\uD130 \uC2DC\uC791"}
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ffd84d] text-stone-950">{"\u2192"}</span>
+            </Link>
+          ) : (
+            <Link href="/labquest?chapter=2&locked=update" className="inline-flex items-center gap-3 rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-black text-stone-500 shadow-sm">
+              <span>🔒</span><span>CHAPTER 2 완료 후 Update 오픈</span>
             </Link>
           ) : <span className="text-xs font-bold text-stone-300">{"\uBBF8\uC158\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694"}</span>}
         </div>

@@ -47,6 +47,10 @@ export default function UpdatePage() {
         router.replace("/login");
         return;
       }
+      if (!currentUser.chapterTwoCompletedAt) {
+        router.replace("/labquest?chapter=2&locked=update");
+        return;
+      }
       const [activeMissions, loadedPosts, loadedMembers, loadedCalendarEvents] = await Promise.all([
         loadActiveMissions(currentUser.id),
         loadDailyPosts(),
