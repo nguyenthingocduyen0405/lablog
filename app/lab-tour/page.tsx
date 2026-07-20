@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import CharacterAvatar from "../components/character-avatar";
 import LabRoomMap from "../components/lab-room-map";
-import { completeOnboarding, getCurrentUser, type AuthUser } from "../lib/auth";
+import { getCurrentUser, type AuthUser } from "../lib/auth";
 import { LAB_SEATS, placeMembersBySeat } from "../lib/lab-map";
 import { DEFAULT_AVATAR_CONFIG, loadLabMembers, saveLabSeat, type LabMember } from "../lib/lab-social";
 
@@ -115,8 +115,7 @@ export default function LabTourPage() {
     }
     setIsFinishing(true);
     try {
-      if (!user.onboardingCompletedAt) await completeOnboarding(user.id);
-      router.push("/mission");
+      router.push("/labquest");
     } finally {
       setIsFinishing(false);
     }
@@ -153,7 +152,7 @@ export default function LabTourPage() {
           {stage === "seat" && <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-500">Choose your position</p><h2 className="mt-1 text-2xl font-black tracking-[-.04em]">지도에서 내 자리를 눌러 주세요.</h2><p className={`mt-1 text-xs font-semibold ${seatMessage ? "text-red-500" : "text-stone-500"}`}>{seatMessage || (selectedSeat === null ? "＋ 표시가 있는 빈 자리를 선택할 수 있어요." : `${selectedSeat + 1}번 자리를 선택했어요.`)}</p></div><button type="button" onClick={confirmSeat} disabled={selectedSeat === null || isSavingSeat} className="shrink-0 rounded-full bg-[#ffd84d] px-6 py-3 text-sm font-black text-stone-950 shadow-[0_5px_0_#d3aa00] disabled:cursor-not-allowed disabled:opacity-40">{isSavingSeat ? "업데이트 중..." : "자리 업데이트 →"}</button></div>}
           {stage === "introductions" && <div className="flex items-center gap-4"><CharacterAvatar config={currentSpeaker?.avatarConfig ?? DEFAULT_AVATAR_CONFIG} background={currentSpeaker?.avatarBackground} name={currentSpeaker?.name} size={56} /><div className="min-w-0 flex-1"><p className="font-black">안녕하세요! 저는 {currentSpeaker?.name ?? "OS Lab 멤버"}예요 👋</p><p className="mt-1 text-xs font-semibold text-stone-500">{currentSpeaker?.role || "OS Lab에서 함께 연구하고 있어요."}</p></div><button type="button" onClick={nextIntroduction} className="shrink-0 rounded-full bg-[#ffd84d] px-5 py-3 text-xs font-black">다음 →</button></div>}
           {stage === "game" && <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-600">Find it · {foundObjects.length}/{labObjects.length}</p><h2 className="mt-1 text-xl font-black">{currentTarget?.emoji} {currentTarget?.label}을 찾아보세요!</h2><p className="mt-1 text-xs font-semibold text-stone-500">{feedback}</p></div><div className="flex gap-1.5">{labObjects.map((object) => <span key={object.id} className={`h-2.5 w-2.5 rounded-full ${foundObjects.includes(object.id) ? "bg-emerald-500" : "bg-stone-300"}`} />)}</div></div>}
-          {stage === "complete" && <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-emerald-600">Lab explorer complete</p><h2 className="mt-1 text-2xl font-black">랩 탐험 완료! 🎉</h2><p className="mt-1 text-xs font-semibold text-stone-500">이제 OS Lab의 새로운 멤버예요.</p></div><button type="button" onClick={finishTour} disabled={isFinishing} className="shrink-0 rounded-full bg-emerald-400 px-6 py-3 text-sm font-black text-emerald-950 shadow-[0_5px_0_#258365]">{isFinishing ? "준비 중..." : "내 미션 만들기 →"}</button></div>}
+          {stage === "complete" && <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-emerald-600">Lab explorer complete</p><h2 className="mt-1 text-2xl font-black">랩 탐험 완료! 🎉</h2><p className="mt-1 text-xs font-semibold text-stone-500">이제 LabQuest Chapter 1을 시작해 볼까요?</p></div><button type="button" onClick={finishTour} disabled={isFinishing} className="shrink-0 rounded-full bg-emerald-400 px-6 py-3 text-sm font-black text-emerald-950 shadow-[0_5px_0_#258365]">{isFinishing ? "준비 중..." : "LABQUEST 시작 →"}</button></div>}
         </div>
       </div>
     </main>

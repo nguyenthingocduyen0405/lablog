@@ -22,7 +22,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthenticated = Boolean(data?.claims?.sub);
   const path = request.nextUrl.pathname;
   const isAuthPage = path === "/login" || path === "/signup";
-  const isProtectedPage = path === "/" || path === "/lab-tour" || path === "/meeting" || path.startsWith("/members/");
+  const isProtectedPage = path === "/" || path === "/lab-tour" || path === "/labquest" || path === "/meeting" || path.startsWith("/members/");
 
   if (!isAuthenticated && isProtectedPage) return NextResponse.redirect(new URL("/login", request.url));
   if (isAuthenticated && isAuthPage) return NextResponse.redirect(new URL("/", request.url));
