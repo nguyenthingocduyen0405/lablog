@@ -28,8 +28,9 @@ export async function updateSession(request: NextRequest) {
   const isAuthenticated = Boolean(claims?.sub);
   const chapterTwoCompleted = typeof claims?.user_metadata?.labquest_chapter2_completed_at === "string";
   const path = request.nextUrl.pathname;
+  const memberPathId = path.startsWith("/members/") ? decodeURIComponent(path.split("/")[2] ?? "") : null;
   const isAuthPage = path === "/login" || path === "/signup";
-  const isProtectedPage = path === "/" || path === "/lab-tour" || path === "/labquest" || path === "/mission" || path === "/update" || path === "/calendar" || path === "/meeting" || path.startsWith("/members/");
+  const isProtectedPage = path === "/" || path === "/lab-tour" || path === "/labquest" || path === "/mission" || path === "/update" || path === "/feed" || path === "/calendar" || path === "/meeting" || path.startsWith("/members/");
 
   if (!isAuthenticated && isProtectedPage) return NextResponse.redirect(new URL("/login", request.url));
   if (isAuthenticated && isAuthPage) return NextResponse.redirect(new URL("/", request.url));
@@ -38,6 +39,12 @@ export async function updateSession(request: NextRequest) {
     destination.searchParams.set("chapter", "2");
     destination.searchParams.set("locked", path.slice(1));
     return NextResponse.redirect(destination);
+  }
+  if (isAuthenticated && path === "/meeting") {
+    return NextResponse.redirect(new URL(`/members/${claims?.sub}?locked=project`, request.url));
+  }
+  if (isAuthenticated && memberPathId && memberPathId !== claims?.sub && !chapterTwoCompleted) {
+    return NextResponse.redirect(new URL(`/members/${claims?.sub}?locked=team`, request.url));
   }
   return response;
 }

@@ -41,12 +41,14 @@ export default function LabQuestChapterOnePage() {
       const progress = saved ? (JSON.parse(saved) as number[]) : [];
       setCompleted(progress.filter((value) => [1, 2, 3, 4].includes(value)));
       const chapterTwoRequested = new URLSearchParams(window.location.search).get("chapter") === "2";
+      const chapterOneStarted = window.localStorage.getItem(`labquest-chapter1-started-${currentUser.id}`) === "true";
       if (progress.includes(4)) {
         if (chapterTwoRequested) setScreen("c2");
-        else router.replace("/mission");
+        else if (currentUser.onboardingCompletedAt) router.replace(`/members/${currentUser.id}`);
+        else setScreen("complete");
         return;
       }
-      setScreen(progress.length ? "map" : "intro");
+      setScreen(progress.length ? "map" : chapterOneStarted ? "m1" : "intro");
     }).catch(() => router.replace("/login"));
     return () => { cancelled = true; };
   }, [router]);
@@ -69,7 +71,8 @@ export default function LabQuestChapterOnePage() {
     setError("");
     try {
       if (!user.onboardingCompletedAt) await completeOnboarding(user.id);
-      router.replace("/");
+      window.localStorage.removeItem(`labquest-chapter1-started-${user.id}`);
+      router.replace(`/members/${user.id}`);
     } catch {
       setScreen("complete");
       setError("진행 상황을 저장하지 못했습니다. 다시 시도해 주세요.");
@@ -77,8 +80,8 @@ export default function LabQuestChapterOnePage() {
   }
 
   if (screen === "loading" || !user) return <Loading />;
-  if (screen === "c2") return <ChapterTwo userId={user.id} chapterCompleted={Boolean(user.chapterTwoCompletedAt)} onBackToLabLog={() => router.push("/")} onUnlocked={async () => { if (!user.onboardingCompletedAt) await completeOnboarding(user.id); await completeChapterTwo(user.id); setUser({ ...user, onboardingCompletedAt: user.onboardingCompletedAt ?? new Date().toISOString(), chapterTwoCompletedAt: new Date().toISOString() }); }} />;
-  if (screen === "intro") return <Intro onBack={() => router.push("/lab-tour")} onStart={() => setScreen("m1")} />;
+  if (screen === "c2") return <ChapterTwo userId={user.id} chapterCompleted={Boolean(user.chapterTwoCompletedAt)} onBackToLabLog={() => router.push(`/members/${user.id}`)} onUnlocked={async () => { if (!user.onboardingCompletedAt) await completeOnboarding(user.id); await completeChapterTwo(user.id); setUser({ ...user, onboardingCompletedAt: user.onboardingCompletedAt ?? new Date().toISOString(), chapterTwoCompletedAt: new Date().toISOString() }); }} />;
+  if (screen === "intro") return <Intro onBack={() => router.push("/lab-tour")} onStart={() => { window.localStorage.setItem(`labquest-chapter1-started-${user.id}`, "true"); setScreen("m1"); }} />;
   if (screen === "map") return <ChapterMap completed={completed} onSelect={(number) => setScreen(`m${number}` as Screen)} />;
   if (screen === "m1") return <MissionOne onDone={() => setScreen("r1")} onMap={() => setScreen("map")} />;
   if (screen === "r1") return <RewardOne onContinue={() => claimReward(1)} />;
