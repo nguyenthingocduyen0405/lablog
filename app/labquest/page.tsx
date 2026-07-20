@@ -231,17 +231,77 @@ function MissionThree({ onDone, onMap }: MissionProps) {
 }
 
 const REQUESTS = [18, 40, 72, 95];
+type SeekStep = { from: number; to: number; distance: number };
 function MissionFour({ onDone, onMap }: MissionProps) {
-  const [head, setHead] = useState(50); const [done, setDone] = useState<number[]>([]); const [total, setTotal] = useState(0); const [errors, setErrors] = useState(0); const [feedback, setFeedback] = useState("현재 Head 50에서 가장 가까운 Request를 선택하세요."); const [quiz, setQuiz] = useState(false);
-  const remaining = REQUESTS.filter((v) => !done.includes(v));
-  function select(value: number) { const nearest = [...remaining].sort((a, b) => Math.abs(a - head) - Math.abs(b - head))[0]; if (value !== nearest) { setErrors((v) => v + 1); return setFeedback(`Track ${nearest}가 현재 Head에서 가장 가까워요.`); } const distance = Math.abs(value - head); const next = [...done, value]; setDone(next); setHead(value); setTotal((v) => v + distance); setFeedback(`Track ${value} 처리 완료 · 이동 거리 ${distance}`); if (next.length === 4) setQuiz(true); }
-  function answer(correct: boolean) { if (correct) onDone(); else { setErrors((v) => v + 1); setFeedback("SSTF는 가까운 요청을 우선하므로 먼 요청에 Starvation이 생길 수 있어요."); } }
-  return <MissionShell number={4} title="Disk Scheduling · SSTF" subtitle="현재 Head에서 가장 가까운 디스크 요청을 순서대로 처리하세요." onMap={onMap} status={`SEEK ${total} · 오류 ${errors}`}>
-    <div className="rounded-[1.5rem] border border-cyan-200/15 bg-white/[.035] p-6"><div className="flex justify-between"><span className="text-sm text-white/45">CURRENT HEAD</span><strong className="text-3xl text-[#39ffb6]">{head}</strong></div><div className="mt-6 grid grid-cols-4 gap-3">{REQUESTS.map((v) => <button key={v} disabled={done.includes(v) || quiz} onClick={() => select(v)} className={`rounded-2xl border p-5 font-black ${done.includes(v) ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-200 opacity-50" : "border-cyan-200/15 bg-black/20 text-cyan-200 hover:border-cyan-300/60"}`}>Track {v}</button>)}</div><div className="mt-5 text-xs text-white/40">처리 순서: 50 {done.map((v) => `→ ${v}`).join(" ")}</div></div>
-    {quiz ? <div className="mt-6 rounded-[1.5rem] border border-violet-300/20 bg-violet-300/[.07] p-6"><Tag>FINAL QUESTION</Tag><h2 className="mt-3 text-xl font-black">SSTF에서도 먼 Request가 너무 오래 기다릴 수 있을까요?</h2><div className="mt-5 grid gap-3 sm:grid-cols-2"><button onClick={() => answer(true)} className="rounded-2xl bg-[#39ffb6] p-4 font-black text-[#07131f]">네, Starvation이 생길 수 있어요</button><button onClick={() => answer(false)} className="rounded-2xl border border-white/15 p-4 font-bold">아니요, 모두 공평해요</button></div></div> : <Feedback>{feedback}</Feedback>}
-  </MissionShell>;
-}
+  const [tutorial, setTutorial] = useState(true);
+  const [head, setHead] = useState(50);
+  const [remaining, setRemaining] = useState(REQUESTS);
+  const [history, setHistory] = useState<SeekStep[]>([]);
+  const [errors, setErrors] = useState(0);
+  const [feedback, setFeedback] = useState("현재 Head에서 가장 가까운 Request를 선택하세요.");
+  const [conceptAnswer, setConceptAnswer] = useState<"yes" | "no" | null>(null);
+  const requestsDone = remaining.length === 0;
+  const complete = requestsDone && conceptAnswer === "yes";
+  const totalSeek = history.reduce((sum, step) => sum + step.distance, 0);
 
+  function selectRequest(value: number) {
+    if (requestsDone) return;
+    const nearest = [...remaining].sort((a, b) => Math.abs(a - head) - Math.abs(b - head))[0];
+    if (value !== nearest) {
+      setErrors((count) => count + 1);
+      setFeedback(`Track ${nearest}가 현재 Head에 더 가까워요.`);
+      return;
+    }
+    const distance = Math.abs(value - head);
+    setHistory((steps) => [...steps, { from: head, to: value, distance }]);
+    setHead(value);
+    setRemaining((requests) => requests.filter((request) => request !== value));
+    setFeedback(`Track ${value} 처리 완료 · Head가 ${distance}만큼 이동했습니다.`);
+  }
+
+  function answerConcept(answer: "yes" | "no") {
+    setConceptAnswer(answer);
+    if (answer === "yes") setFeedback("맞아요! 가까운 요청만 계속 오면 먼 요청이 오래 기다릴 수 있어요.");
+    else { setErrors((count) => count + 1); setFeedback("SSTF는 먼 Request가 계속 밀리는 Starvation이 생길 수 있어요."); }
+  }
+
+  return <main className="min-h-screen bg-[radial-gradient(circle_at_18%_10%,#264b50,transparent_28%),linear-gradient(#07151e,#10252d_65%,#111d24)] text-white">
+    <header className="grid h-20 grid-cols-[7rem_1fr_auto] items-center gap-4 border-b border-cyan-200/15 bg-[#071219]/90 px-4 sm:px-8 lg:px-12">
+      <button onClick={onMap} className="rounded-full border border-white/15 bg-white/[.04] px-4 py-2 text-sm font-bold text-slate-300 hover:bg-white/10">← 지도</button>
+      <div className="flex flex-col"><small className="text-[10px] font-black tracking-[.16em] text-[#78949d]">OS LAB · MISSION 04</small><strong className="mt-1 text-lg">Disk Scheduling · SSTF</strong></div>
+      <span className="grid h-11 min-w-16 place-items-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-sm font-black text-cyan-200">{history.length}/4</span>
+    </header>
+
+    <section className="mx-auto w-[min(1080px,calc(100%-2rem))] py-9 sm:py-12">
+      <div className="grid items-end gap-7 md:grid-cols-[1fr_auto]">
+        <div><p className="text-xs font-black tracking-[.18em] text-[#82c6d0]">SHORTEST SEEK TIME FIRST</p><h1 className="mt-3 text-4xl font-black leading-[1.04] tracking-[-.055em] sm:text-6xl">HDD Head와 가장 가까운<br /><em className="not-italic text-[#8ce5cb]">Request</em>를 선택하세요</h1><p className="mt-5 text-base font-semibold leading-7 text-[#a9bec4]">Head 이동 거리가 짧은 Request부터 처리해 전체 Seek Time을 줄여 보세요.</p></div>
+        <div className="grid min-w-56 grid-cols-2 overflow-hidden rounded-2xl border border-cyan-200/20 bg-cyan-200/[.04]"><div className="p-4"><small className="text-[10px] font-black tracking-widest text-[#79959f]">HEAD</small><strong className="mt-1 block text-3xl text-cyan-200">{head}</strong></div><div className="border-l border-cyan-200/15 p-4"><small className="text-[10px] font-black tracking-widest text-[#79959f]">TOTAL SEEK</small><strong className="mt-1 block text-3xl text-[#8ce5cb]">{totalSeek}</strong></div><span className="col-span-2 border-t border-cyan-200/15 px-4 py-2 text-center text-xs font-black tracking-widest text-amber-200">ERRORS · {errors}</span></div>
+      </div>
+
+      <section className="mt-8 rounded-[1.5rem] border border-cyan-200/20 bg-[#091a22]/90 p-5 shadow-[0_25px_60px_rgba(0,0,0,.25)] sm:p-7">
+        <ZoneTitle title="HDD TRACK MAP" subtitle="TRACK 0 — 100" />
+        <div className="mt-7 flex justify-between px-1 text-xs font-bold text-[#66838c]">{[0, 20, 40, 60, 80, 100].map((tick) => <span key={tick}>{tick}</span>)}</div>
+        <div className="relative mx-3 mt-6 h-36 border-t-2 border-cyan-100/20 bg-[repeating-linear-gradient(90deg,transparent_0_calc(20%-1px),rgba(120,180,190,.12)_calc(20%-1px)_20%)]">
+          <i style={{ left: `${head}%` }} className="absolute top-0 z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center not-italic transition-all duration-500"><b className="rounded-t-lg bg-[#8ce5cb] px-3 py-1 text-[10px] font-black text-[#07251f]">HEAD</b><strong className="grid h-12 w-12 place-items-center rounded-full border-4 border-[#8ce5cb] bg-[#12323a] text-lg shadow-[0_0_25px_rgba(140,229,203,.35)]">{head}</strong></i>
+          {remaining.map((request) => <button key={request} style={{ left: `${request}%` }} onClick={() => selectRequest(request)} className="absolute top-16 z-10 -translate-x-1/2 rounded-xl border border-amber-200/35 bg-amber-200/10 px-3 py-2 text-amber-100 transition hover:-translate-x-1/2 hover:-translate-y-1"><b className="block text-base">{request}</b><small className="text-[9px] font-black tracking-wider">REQUEST</small></button>)}
+          {history.map((step) => <span key={step.to} style={{ left: `${step.to}%` }} className="absolute top-16 -translate-x-1/2 text-xl font-black text-[#8ce5cb]">✓</span>)}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-black/20 px-4 py-3 text-sm"><span className="text-[#90a7ad]">CURRENT HEAD <b className="ml-2 text-cyan-200">TRACK {head}</b></span><i className="not-italic text-[#6d8991]">가까운 Request를 클릭하세요</i></div>
+      </section>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <section className="rounded-[1.25rem] border border-cyan-200/20 bg-[#091a22]/90 p-5"><ZoneTitle title="REQUEST QUEUE" subtitle="SSTF PICK" /><div className="mt-4 space-y-2">{remaining.length === 0 ? <em className="block rounded-xl bg-black/20 p-5 text-center text-sm not-italic text-[#789097]">모든 Request 처리 완료</em> : remaining.map((request) => <button key={request} onClick={() => selectRequest(request)} className="grid w-full grid-cols-[2.5rem_1fr_auto] items-center gap-3 rounded-xl border border-cyan-200/10 bg-white/[.035] p-3 text-left hover:border-cyan-200/35"><i className="grid h-9 w-9 place-items-center rounded-lg bg-cyan-200/10 text-xs font-black not-italic text-cyan-200">R</i><span><b className="block text-base">TRACK {request}</b><small className="text-xs text-[#789097]">HEAD에서 거리</small></span><strong className="text-xl text-amber-200">{Math.abs(request - head)}</strong></button>)}</div></section>
+        <section className="rounded-[1.25rem] border border-cyan-200/20 bg-[#091a22]/90 p-5"><ZoneTitle title="SEEK HISTORY" subtitle={`TOTAL · ${totalSeek}`} /><div className="mt-4 space-y-2">{history.length === 0 ? <em className="block rounded-xl bg-black/20 p-5 text-center text-sm not-italic text-[#789097]">처리 결과가 여기에 기록됩니다.</em> : history.map((step, index) => <span key={`${step.to}-${index}`} className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-3 rounded-xl bg-white/[.035] px-4 py-3"><b className="text-base">{step.from}</b><i className="not-italic text-cyan-200">→</i><strong className="text-base text-[#8ce5cb]">{step.to}</strong><small className="rounded-lg bg-amber-200/10 px-2 py-1 text-xs font-black text-amber-200">+{step.distance}</small></span>)}</div></section>
+      </div>
+
+      {requestsDone && <section className="mt-4 grid items-center gap-5 rounded-[1.25rem] border border-violet-300/20 bg-violet-300/[.06] p-5 md:grid-cols-[1fr_auto]"><div><small className="text-[10px] font-black tracking-[.16em] text-violet-200">FINAL QUESTION</small><h2 className="mt-2 text-xl font-black sm:text-2xl">SSTF에서도 먼 Request가 너무 오래 기다릴 수 있을까요?</h2></div><div className="grid gap-2 sm:grid-cols-2"><button onClick={() => answerConcept("no")} className={`rounded-xl border p-3 text-sm font-bold ${conceptAnswer === "no" ? "border-red-300 bg-red-300/10 text-red-200" : "border-white/15"}`}>아니요, 모두 공평해요</button><button onClick={() => answerConcept("yes")} className={`rounded-xl border p-3 text-sm font-bold ${conceptAnswer === "yes" ? "border-[#8ce5cb] bg-[#8ce5cb]/10 text-[#8ce5cb]" : "border-white/15"}`}>네, Starvation이 생길 수 있어요</button></div></section>}
+
+      <div className={`mt-4 flex min-h-20 flex-wrap items-center gap-4 rounded-2xl border p-4 ${complete ? "border-[#8ce5cb]/35 bg-[#8ce5cb]/[.06]" : "border-cyan-200/20 bg-[#10242b]"}`}><i className={`grid h-10 w-10 place-items-center rounded-full text-sm font-black not-italic ${complete ? "bg-[#8ce5cb] text-[#07342a]" : "bg-cyan-200/10 text-cyan-200"}`}>{complete ? "✓" : "i"}</i><span className="flex flex-1 flex-col"><strong className="text-base">{complete ? "SSTF Disk Scheduling을 완료했습니다." : feedback}</strong><small className="mt-1 text-sm text-[#829aa1]">{complete ? "Seek History를 확인한 뒤 제출하세요." : requestsDone ? "마지막 질문에 답해 보세요." : "현재 Head와 각 Request의 거리를 비교하세요."}</small></span>{complete && <button onClick={onDone} className="rounded-xl bg-gradient-to-r from-[#8ce5cb] to-cyan-300 px-6 py-3 text-sm font-black text-[#07342a] shadow-[0_5px_0_#245b50]">제출</button>}</div>
+    </section>
+
+    {tutorial && <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#02090d]/80 p-5 backdrop-blur-sm"><section className="relative grid w-full max-w-3xl items-center gap-6 rounded-[2rem] border border-cyan-200/25 bg-[#0b2028] p-7 shadow-[0_35px_100px_rgba(0,0,0,.55)] sm:grid-cols-[10rem_1fr] sm:p-9"><button onClick={() => setTutorial(false)} className="absolute right-5 top-4 text-2xl text-white/40">×</button><Image src="/os-penguin.png" alt="OS Lab 안내자 펭귄" width={160} height={160} className="mx-auto h-40 w-40 object-contain" /><div><Tag>먼저 한 번 같이 해봐요!</Tag><h2 className="mt-3 text-2xl font-black sm:text-3xl">Head 50에서 가장 가까운 Request는?</h2><div className="mt-5 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-2 text-center"><span className="rounded-xl bg-white/[.05] p-3 text-sm font-bold">TRACK 40<small className="mt-1 block text-[#8ce5cb]">거리 10</small></span><i className="not-italic">←</i><b className="rounded-xl bg-[#8ce5cb] p-3 text-sm text-[#07342a]">HEAD 50</b><i className="not-italic">→</i><span className="rounded-xl bg-white/[.05] p-3 text-sm font-bold">TRACK 72<small className="mt-1 block text-amber-200">거리 22</small></span></div><p className="mt-5 text-sm font-semibold leading-7 text-white/60">SSTF는 이동 거리가 가장 짧은 Request를 먼저 처리해요. 여기서는 Track 40이 가장 가깝습니다.</p><button onClick={() => setTutorial(false)} className="mt-5 w-full rounded-full bg-[#8ce5cb] px-6 py-3 text-base font-black text-[#07342a]">이해했어요 · 시작하기</button></div></section></div>}
+  </main>;
+}
 function RewardOne({ onContinue }: { onContinue: () => void }) { return <Reward number={1} title="랩 Codex 이용권" accent="text-[#39ffb6]" onContinue={onContinue}><div className="rounded-[1.5rem] border border-[#39ffb6]/30 bg-[#39ffb6]/[.07] p-6"><Tag>CODEX / LAB PREMIUM ACCESS</Tag><div className="mt-5 grid grid-cols-2 gap-3 text-base"><Stat label="ACCURACY" value="100%" /><Stat label="NEXT STATUS" value="관리자 승인 대기" /></div></div><Note>랩 관리자 확인 후 계정 이용 권한이 활성화됩니다.</Note></Reward>; }
 function RewardTwo({ onContinue }: { onContinue: () => void }) { return <Reward number={2} title="₩150,000 상품권" accent="text-amber-300" onContinue={onContinue}><div className="rounded-[1.5rem] border border-amber-300/30 bg-amber-300/[.07] p-6"><Tag>REWARD VOUCHER</Tag><strong className="mt-4 block text-4xl text-amber-200">₩150,000</strong><div className="mt-5 grid grid-cols-2 gap-3 text-base"><Stat label="ALGORITHM" value="SJF" /><Stat label="NEXT STATUS" value="관리자 승인 대기" /></div></div><Note>보상 지급은 랩 관리자 확인 후 진행됩니다.</Note></Reward>; }
 function RewardThree({ onContinue }: { onContinue: () => void }) { return <Reward number={3} title="랩 출입문 카드" accent="text-cyan-300" onContinue={onContinue}><div className="rounded-[1.5rem] border border-cyan-300/30 bg-gradient-to-br from-cyan-300/20 to-violet-400/10 p-6"><div className="flex justify-between text-[10px] font-black tracking-[.2em]"><span>OS LAB / ACCESS</span><span>LAB</span></div><strong className="mt-12 block text-2xl">MEMBER AUTHORIZED</strong><p className="mt-2 text-sm tracking-[.4em] text-white/45">•••• 03</p></div><p className="mt-4 text-sm font-bold text-cyan-200">랩 출입 권한이 활성화되었습니다.</p><Note>실물 카드 지급은 랩 관리자 확인 후 진행됩니다.</Note></Reward>; }
