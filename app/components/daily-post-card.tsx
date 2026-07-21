@@ -13,6 +13,7 @@ import {
   type DailyPost,
   type LabMember,
 } from "../lib/lab-social";
+import { useI18n } from "../lib/i18n";
 
 type DailyPostCardProps = {
   post: DailyPost;
@@ -23,21 +24,38 @@ type DailyPostCardProps = {
 
 const reactionOptions = ["👏", "🔥", "💡", "❤️"];
 
-export default function DailyPostCard({ post, member, currentUserId, members }: DailyPostCardProps) {
-  const imageStyle = post.imageDataUrl ? { backgroundImage: `url("${post.imageDataUrl}")` } : undefined;
+export default function DailyPostCard({
+  post,
+  member,
+  currentUserId,
+  members,
+}: DailyPostCardProps) {
+  const { locale, l } = useI18n();
+  const imageStyle = post.imageDataUrl
+    ? { backgroundImage: `url("${post.imageDataUrl}")` }
+    : undefined;
   const postStatus = getPostStatus(post.status);
-  const momentCategory = MOMENT_CATEGORIES.find((category) => category.value === post.momentCategory) ?? MOMENT_CATEGORIES[0];
+  const momentCategory =
+    MOMENT_CATEGORIES.find(
+      (category) => category.value === post.momentCategory,
+    ) ?? MOMENT_CATEGORIES[0];
   const [reactions, setReactions] = useState(post.reactions);
   const [comments, setComments] = useState(post.comments);
   const [showComments, setShowComments] = useState(false);
   const [isImageOpen, setIsImageOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
-  const myReaction = reactions.find((item) => item.userId === currentUserId)?.emoji;
-  const reactionCounts = useMemo(() => reactionOptions.map((emoji) => ({
-    emoji,
-    count: reactions.filter((item) => item.emoji === emoji).length,
-  })), [reactions]);
+  const myReaction = reactions.find(
+    (item) => item.userId === currentUserId,
+  )?.emoji;
+  const reactionCounts = useMemo(
+    () =>
+      reactionOptions.map((emoji) => ({
+        emoji,
+        count: reactions.filter((item) => item.emoji === emoji).length,
+      })),
+    [reactions],
+  );
 
   async function handleReaction(emoji: string) {
     if (isSaving) return;
@@ -53,7 +71,13 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
       await setPostReaction(post.id, currentUserId, nextEmoji);
     } catch {
       setReactions(previous);
-      setError("반응을 저장하지 못했어요.");
+      setError(
+        l(
+          "반응을 저장하지 못했어요.",
+          "Không thể lưu cảm xúc.",
+          "Could not save the reaction.",
+        ),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -72,7 +96,13 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
       form.reset();
       setShowComments(true);
     } catch {
-      setError("댓글을 저장하지 못했어요.");
+      setError(
+        l(
+          "댓글을 저장하지 못했어요.",
+          "Không thể lưu bình luận.",
+          "Could not save the comment.",
+        ),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -80,97 +110,201 @@ export default function DailyPostCard({ post, member, currentUserId, members }: 
 
   return (
     <>
-    <article id={`post-${post.id}`} className="group scroll-mt-24 overflow-hidden rounded-[2rem] bg-white p-2 shadow-[0_18px_55px_rgba(35,31,24,0.10)] ring-1 ring-black/[0.05] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(35,31,24,0.16)]">
-      <div
-        className="relative flex aspect-[4/5] flex-col justify-between overflow-hidden rounded-[1.55rem] bg-stone-950 p-5 text-white"
-        style={post.imageDataUrl ? undefined : { background: post.background }}
+      <article
+        id={`post-${post.id}`}
+        className="group scroll-mt-24 overflow-hidden rounded-[2rem] bg-white p-2 shadow-[0_18px_55px_rgba(35,31,24,0.10)] ring-1 ring-black/[0.05] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(35,31,24,0.16)]"
       >
-        {post.imageDataUrl && (
-          <>
-            <div className="absolute -inset-8 scale-110 bg-cover bg-center opacity-50 blur-2xl" style={imageStyle} />
-            <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={imageStyle} />
-          </>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70" />
-        {post.imageDataUrl && (
-          <button type="button" aria-label="View larger photo" onClick={() => setIsImageOpen(true)} className="absolute inset-0 z-[5] cursor-pointer" />
-        )}
-        <div className="relative z-10 flex items-start justify-between gap-2">
-          <Link href={`/members/${member.id}`} className="flex w-fit items-center gap-2 rounded-full bg-black/25 py-1.5 pl-1.5 pr-3 backdrop-blur-md transition hover:bg-black/40">
-            <CharacterAvatar config={member.avatarConfig} background={member.avatarBackground} name={member.name} size={32} />
-            <span className="text-sm font-bold">{member.name}</span>
-          </Link>
-          <div className="flex min-w-0 max-w-[68%] flex-col items-end gap-2">
-            <span className={`shrink-0 rounded-full px-3 py-2 text-xs font-black backdrop-blur-md ${post.kind === "moment" ? "bg-emerald-300/95 text-emerald-950" : post.status === "help" ? "bg-red-500 text-white" : "bg-white/90 text-stone-950"}`}>
-              {post.kind === "moment" ? `${momentCategory.emoji} ${momentCategory.label}` : `${postStatus.emoji} ${postStatus.label}`}
-            </span>
-            {post.kind === "work" && post.missionTitle && (
-              <span className="max-w-full truncate rounded-full bg-violet-300/95 px-3 py-1.5 text-[10px] font-black text-violet-950 shadow-sm backdrop-blur">
-                🎯 {post.missionTitle}
+        <div
+          className="relative flex aspect-[4/5] flex-col justify-between overflow-hidden rounded-[1.55rem] bg-stone-950 p-5 text-white"
+          style={
+            post.imageDataUrl ? undefined : { background: post.background }
+          }
+        >
+          {post.imageDataUrl && (
+            <>
+              <div
+                className="absolute -inset-8 scale-110 bg-cover bg-center opacity-50 blur-2xl"
+                style={imageStyle}
+              />
+              <div
+                className="absolute inset-0 bg-contain bg-center bg-no-repeat"
+                style={imageStyle}
+              />
+            </>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70" />
+          {post.imageDataUrl && (
+            <button
+              type="button"
+              aria-label="View larger photo"
+              onClick={() => setIsImageOpen(true)}
+              className="absolute inset-0 z-[5] cursor-pointer"
+            />
+          )}
+          <div className="relative z-10 flex items-start justify-between gap-2">
+            <Link
+              href={`/members/${member.id}`}
+              className="flex w-fit items-center gap-2 rounded-full bg-black/25 py-1.5 pl-1.5 pr-3 backdrop-blur-md transition hover:bg-black/40"
+            >
+              <CharacterAvatar
+                config={member.avatarConfig}
+                background={member.avatarBackground}
+                name={member.name}
+                size={32}
+              />
+              <span className="text-sm font-bold">{member.name}</span>
+            </Link>
+            <div className="flex min-w-0 max-w-[68%] flex-col items-end gap-2">
+              <span
+                className={`shrink-0 rounded-full px-3 py-2 text-xs font-black backdrop-blur-md ${post.kind === "moment" ? "bg-emerald-300/95 text-emerald-950" : post.status === "help" ? "bg-red-500 text-white" : "bg-white/90 text-stone-950"}`}
+              >
+                {post.kind === "moment"
+                  ? `${momentCategory.emoji} ${momentCategory.value === "daily" ? l(momentCategory.label, "Hằng ngày", "Daily") : momentCategory.value === "travel" ? l(momentCategory.label, "Du lịch", "Travel") : momentCategory.value === "food" ? l(momentCategory.label, "Ẩm thực", "Food") : momentCategory.value === "rest" ? l(momentCategory.label, "Nghỉ ngơi", "Rest") : l(momentCategory.label, "Cùng nhau", "Together")}`
+                  : `${postStatus.emoji} ${postStatus.value === "studying" ? l(postStatus.label, "Đang học", "Studying") : postStatus.value === "working" ? l(postStatus.label, "Đang làm", "In progress") : postStatus.value === "experimenting" ? l(postStatus.label, "Đang thí nghiệm", "Experimenting") : postStatus.value === "help" ? l(postStatus.label, "Cần trợ giúp", "Need help") : l(postStatus.label, "Hoàn thành", "Completed")}`}
               </span>
-            )}
-          </div>
-        </div>
-
-        {!post.imageDataUrl && (
-          <div className="relative z-10 flex flex-1 items-center justify-center text-7xl drop-shadow-lg transition duration-300 group-hover:scale-110">
-            {post.emoji}
-          </div>
-        )}
-
-        <div className="relative z-10">
-          <p className="text-lg font-bold leading-7 text-white drop-shadow-sm">{post.caption}</p>
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-white/70">{formatPostDate(post.createdAt)}</p>
-            {post.scoreAwarded > 0 && <span className="rounded-full bg-[#ffd84d] px-2.5 py-1 text-[10px] font-black text-stone-950">+{post.scoreAwarded}P</span>}
-          </div>
-        </div>
-      </div>
-      <div className="px-2 pb-2 pt-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-1.5">
-            {reactionCounts.map(({ emoji, count }) => (
-              <button key={emoji} type="button" disabled={isSaving} onClick={() => handleReaction(emoji)} aria-label={`React with ${emoji}`} className={`rounded-full px-2.5 py-1.5 text-sm font-bold transition ${myReaction === emoji ? "bg-[#ffd84d] ring-2 ring-stone-900" : "bg-stone-100 hover:bg-stone-200"}`}>
-                {emoji}{count > 0 && <span className="ml-1 text-xs">{count}</span>}
-              </button>
-            ))}
-          </div>
-          <button type="button" onClick={() => setShowComments((current) => !current)} className="shrink-0 rounded-full px-2 py-1.5 text-xs font-black text-stone-500 hover:bg-stone-100">
-            {"\uB313\uAE00"} {comments.length}
-          </button>
-        </div>
-        {error && <p className="mt-2 text-xs font-bold text-red-500">{error}</p>}
-        {showComments && (
-          <div className="mt-3 border-t border-stone-100 pt-3">
-            <div className="max-h-48 space-y-3 overflow-y-auto">
-              {comments.length === 0 && <p className="py-3 text-center text-xs font-semibold text-stone-400">{"\uCCAB \uB313\uAE00\uC744 \uB0A8\uACA8 \uBCF4\uC138\uC694."}</p>}
-              {comments.map((comment) => {
-                const author = members.find((item) => item.id === comment.userId);
-                return (
-                  <div key={comment.id} className="flex gap-2">
-                    <CharacterAvatar config={author?.avatarConfig ?? DEFAULT_AVATAR_CONFIG} background={author?.avatarBackground ?? "#e7e5e4"} name={author?.name ?? "Lab member"} size={32} />
-                    <div className="min-w-0 rounded-2xl bg-stone-100 px-3 py-2 text-xs">
-                      <p className="font-black">{author?.name ?? "Lab member"}</p>
-                      <p className="mt-0.5 break-words font-medium leading-5 text-stone-600">{comment.body}</p>
-                    </div>
-                  </div>
-                );
-              })}
+              {post.kind === "work" && post.missionTitle && (
+                <span className="max-w-full truncate rounded-full bg-violet-300/95 px-3 py-1.5 text-[10px] font-black text-violet-950 shadow-sm backdrop-blur">
+                  🎯 {post.missionTitle}
+                </span>
+              )}
             </div>
-            <form onSubmit={handleComment} className="mt-3 flex gap-2">
-              <input name="comment" required maxLength={300} placeholder={"\uB313\uAE00\uC744 \uB0A8\uACA8 \uBCF4\uC138\uC694..."} className="min-w-0 flex-1 rounded-full bg-stone-100 px-4 py-2.5 text-xs font-semibold outline-none ring-[#ffd84d] transition focus:ring-2" />
-              <button type="submit" disabled={isSaving} className="rounded-full bg-stone-950 px-4 py-2.5 text-xs font-black text-white disabled:opacity-50">{"\uB4F1\uB85D"}</button>
-            </form>
           </div>
-        )}
-      </div>
-    </article>
-    {isImageOpen && post.imageDataUrl && (
-      <div role="dialog" aria-modal="true" aria-label="Photo preview" onClick={() => setIsImageOpen(false)} className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-5 backdrop-blur-sm">
-        <button type="button" aria-label="Close photo preview" onClick={() => setIsImageOpen(false)} className="absolute right-5 top-5 flex h-11 w-11 items-center justify-center rounded-full bg-white text-2xl font-medium text-stone-950 shadow-lg">{"\u00D7"}</button>
-        <button type="button" onClick={(event) => event.stopPropagation()} className="h-[70vh] max-h-[36rem] w-[88vw] max-w-[44rem] cursor-default rounded-[1.5rem] bg-stone-950 bg-contain bg-center bg-no-repeat shadow-[0_30px_100px_rgba(0,0,0,.5)]" style={{ backgroundImage: `url("${post.imageDataUrl}")` }} aria-label={post.caption} />
-      </div>
-    )}
+
+          {!post.imageDataUrl && (
+            <div className="relative z-10 flex flex-1 items-center justify-center text-7xl drop-shadow-lg transition duration-300 group-hover:scale-110">
+              {post.emoji}
+            </div>
+          )}
+
+          <div className="relative z-10">
+            <p className="text-lg font-bold leading-7 text-white drop-shadow-sm">
+              {post.caption}
+            </p>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-white/70">
+                {formatPostDate(post.createdAt, locale)}
+              </p>
+              {post.scoreAwarded > 0 && (
+                <span className="rounded-full bg-[#ffd84d] px-2.5 py-1 text-[10px] font-black text-stone-950">
+                  +{post.scoreAwarded}P
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="px-2 pb-2 pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-1.5">
+              {reactionCounts.map(({ emoji, count }) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => handleReaction(emoji)}
+                  aria-label={`React with ${emoji}`}
+                  className={`rounded-full px-2.5 py-1.5 text-sm font-bold transition ${myReaction === emoji ? "bg-[#ffd84d] ring-2 ring-stone-900" : "bg-stone-100 hover:bg-stone-200"}`}
+                >
+                  {emoji}
+                  {count > 0 && <span className="ml-1 text-xs">{count}</span>}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowComments((current) => !current)}
+              className="shrink-0 rounded-full px-2 py-1.5 text-xs font-black text-stone-500 hover:bg-stone-100"
+            >
+              {l("댓글", "Bình luận", "Comments")} {comments.length}
+            </button>
+          </div>
+          {error && (
+            <p className="mt-2 text-xs font-bold text-red-500">{error}</p>
+          )}
+          {showComments && (
+            <div className="mt-3 border-t border-stone-100 pt-3">
+              <div className="max-h-48 space-y-3 overflow-y-auto">
+                {comments.length === 0 && (
+                  <p className="py-3 text-center text-xs font-semibold text-stone-400">
+                    {l(
+                      "첫 댓글을 남겨 보세요.",
+                      "Hãy để lại bình luận đầu tiên.",
+                      "Leave the first comment.",
+                    )}
+                  </p>
+                )}
+                {comments.map((comment) => {
+                  const author = members.find(
+                    (item) => item.id === comment.userId,
+                  );
+                  return (
+                    <div key={comment.id} className="flex gap-2">
+                      <CharacterAvatar
+                        config={author?.avatarConfig ?? DEFAULT_AVATAR_CONFIG}
+                        background={author?.avatarBackground ?? "#e7e5e4"}
+                        name={author?.name ?? "Lab member"}
+                        size={32}
+                      />
+                      <div className="min-w-0 rounded-2xl bg-stone-100 px-3 py-2 text-xs">
+                        <p className="font-black">
+                          {author?.name ?? "Lab member"}
+                        </p>
+                        <p className="mt-0.5 break-words font-medium leading-5 text-stone-600">
+                          {comment.body}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <form onSubmit={handleComment} className="mt-3 flex gap-2">
+                <input
+                  name="comment"
+                  required
+                  maxLength={300}
+                  placeholder={l(
+                    "댓글을 남겨 보세요...",
+                    "Viết bình luận...",
+                    "Leave a comment...",
+                  )}
+                  className="min-w-0 flex-1 rounded-full bg-stone-100 px-4 py-2.5 text-xs font-semibold outline-none ring-[#ffd84d] transition focus:ring-2"
+                />
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="rounded-full bg-stone-950 px-4 py-2.5 text-xs font-black text-white disabled:opacity-50"
+                >
+                  {l("등록", "Đăng", "Post")}
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+      </article>
+      {isImageOpen && post.imageDataUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo preview"
+          onClick={() => setIsImageOpen(false)}
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-5 backdrop-blur-sm"
+        >
+          <button
+            type="button"
+            aria-label="Close photo preview"
+            onClick={() => setIsImageOpen(false)}
+            className="absolute right-5 top-5 flex h-11 w-11 items-center justify-center rounded-full bg-white text-2xl font-medium text-stone-950 shadow-lg"
+          >
+            {"\u00D7"}
+          </button>
+          <button
+            type="button"
+            onClick={(event) => event.stopPropagation()}
+            className="h-[70vh] max-h-[36rem] w-[88vw] max-w-[44rem] cursor-default rounded-[1.5rem] bg-stone-950 bg-contain bg-center bg-no-repeat shadow-[0_30px_100px_rgba(0,0,0,.5)]"
+            style={{ backgroundImage: `url("${post.imageDataUrl}")` }}
+            aria-label={post.caption}
+          />
+        </div>
+      )}
     </>
   );
 }

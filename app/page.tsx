@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getCurrentUser, logoutAccount, type AuthUser } from "./lib/auth";
 import CharacterAvatar from "./components/character-avatar";
+import LanguageSwitcher from "./components/language-switcher";
+import { useI18n } from "./lib/i18n";
 
 function OsLabLogo() {
   return (
@@ -27,6 +29,7 @@ function OsLabLogo() {
 
 export default function ReadyPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isStarting, setIsStarting] = useState(false);
 
@@ -72,18 +75,19 @@ export default function ReadyPage() {
       <header className="relative z-10 flex items-center justify-between px-6 py-6 sm:px-10">
         <p className="text-xs font-black uppercase tracking-[0.24em] text-stone-400">OS LAB</p>
         <div className="flex items-center gap-3">
+          <LanguageSwitcher compact />
           <span className="hidden text-sm font-bold text-stone-400 sm:block">{user.name}</span>
           <Link href={`/members/${user.id}`} className="rounded-[.85rem] ring-2 ring-white shadow-sm"><CharacterAvatar config={user.avatarConfig} background={user.avatarBackground} name={user.name} size={40} /></Link>
-          <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="text-xs font-bold text-stone-400 hover:text-stone-950">{"\uB85C\uADF8\uC544\uC6C3"}</button>
+          <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="text-xs font-bold text-stone-400 hover:text-stone-950">{t("logout")}</button>
         </div>
       </header>
 
       <section className="relative z-10 mx-auto flex min-h-[calc(100vh-88px)] max-w-4xl flex-col items-center justify-center px-6 pb-20 text-center">
         <OsLabLogo />
-        <p className="mt-12 text-sm font-black tracking-[0.14em] text-violet-500">OS Lab{"\uC5D0 \uC628 \uAC78 \uD658\uC601\uD574"}</p>
-        <h1 className="mt-4 text-6xl font-black tracking-[-0.075em] sm:text-8xl">{"\uC900\uBE44\uB410\uC5B4?"}</h1>
+        <p className="mt-12 text-sm font-black tracking-[0.14em] text-violet-500">{t("welcomeOsLab")}</p>
+        <h1 className="mt-4 text-6xl font-black tracking-[-0.075em] sm:text-8xl">{t("ready")}</h1>
         <button type="button" disabled={isStarting} onClick={startOnboarding} className="group mt-10 inline-flex items-center gap-5 rounded-full bg-[#191812] py-3 pl-8 pr-3 text-lg font-black text-white shadow-[0_8px_0_#d8b300] transition hover:-translate-y-1 active:translate-y-1 active:shadow-none disabled:cursor-wait disabled:opacity-60">
-          {isStarting ? "\uC900\uBE44 \uC911..." : "\uB7A9 \uD22C\uC5B4 \uC2DC\uC791"}
+          {isStarting ? t("preparing") : t("startLabTour")}
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#ffd84d] text-xl text-[#191812] transition group-hover:translate-x-1">{"\u2192"}</span>
         </button>
       </section>

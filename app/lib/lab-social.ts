@@ -23,16 +23,36 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
 };
 
 export function mapAvatarConfig(value: unknown): AvatarConfig {
-  const config = value && typeof value === "object" ? value as Partial<AvatarConfig> : {};
+  const config =
+    value && typeof value === "object" ? (value as Partial<AvatarConfig>) : {};
   return {
     character: "person",
-    gender: ["male", "female"].includes(String(config.gender)) ? config.gender as AvatarConfig["gender"] : DEFAULT_AVATAR_CONFIG.gender,
-    body: ["slim", "round"].includes(String(config.body)) ? config.body as AvatarConfig["body"] : DEFAULT_AVATAR_CONFIG.body,
-    skin: typeof config.skin === "string" ? config.skin : DEFAULT_AVATAR_CONFIG.skin,
-    hair: ["short", "side", "long", "wave"].includes(String(config.hair)) ? config.hair as AvatarConfig["hair"] : DEFAULT_AVATAR_CONFIG.hair,
-    hairColor: typeof config.hairColor === "string" ? config.hairColor : DEFAULT_AVATAR_CONFIG.hairColor,
-    outfitColor: typeof config.outfitColor === "string" ? config.outfitColor : DEFAULT_AVATAR_CONFIG.outfitColor,
-    accessory: ["none", "glasses", "star", "headphones"].includes(String(config.accessory)) ? config.accessory as AvatarConfig["accessory"] : DEFAULT_AVATAR_CONFIG.accessory,
+    gender: ["male", "female"].includes(String(config.gender))
+      ? (config.gender as AvatarConfig["gender"])
+      : DEFAULT_AVATAR_CONFIG.gender,
+    body: ["slim", "round"].includes(String(config.body))
+      ? (config.body as AvatarConfig["body"])
+      : DEFAULT_AVATAR_CONFIG.body,
+    skin:
+      typeof config.skin === "string"
+        ? config.skin
+        : DEFAULT_AVATAR_CONFIG.skin,
+    hair: ["short", "side", "long", "wave"].includes(String(config.hair))
+      ? (config.hair as AvatarConfig["hair"])
+      : DEFAULT_AVATAR_CONFIG.hair,
+    hairColor:
+      typeof config.hairColor === "string"
+        ? config.hairColor
+        : DEFAULT_AVATAR_CONFIG.hairColor,
+    outfitColor:
+      typeof config.outfitColor === "string"
+        ? config.outfitColor
+        : DEFAULT_AVATAR_CONFIG.outfitColor,
+    accessory: ["none", "glasses", "star", "headphones"].includes(
+      String(config.accessory),
+    )
+      ? (config.accessory as AvatarConfig["accessory"])
+      : DEFAULT_AVATAR_CONFIG.accessory,
   };
 }
 
@@ -77,7 +97,9 @@ export function isPostStatus(value: string): value is PostStatus {
 }
 
 export function getPostStatus(status: PostStatus) {
-  return POST_STATUSES.find((item) => item.value === status) ?? POST_STATUSES[1];
+  return (
+    POST_STATUSES.find((item) => item.value === status) ?? POST_STATUSES[1]
+  );
 }
 
 export type DailyPost = {
@@ -135,7 +157,12 @@ export type PostComment = {
 
 export type LabNotification = {
   id: string;
-  type: "reaction" | "comment" | "streak_reminder" | "mission_reminder" | "team_project_invite";
+  type:
+    | "reaction"
+    | "comment"
+    | "streak_reminder"
+    | "mission_reminder"
+    | "team_project_invite";
   emoji: string | null;
   commentPreview: string | null;
   postId: string | null;
@@ -160,7 +187,8 @@ export const CALENDAR_EVENT_CATEGORIES = [
   { value: "other", label: "기타", emoji: "📌", color: "#f5c842" },
 ] as const;
 
-export type CalendarEventCategory = (typeof CALENDAR_EVENT_CATEGORIES)[number]["value"];
+export type CalendarEventCategory =
+  (typeof CALENDAR_EVENT_CATEGORIES)[number]["value"];
 
 export type CalendarEvent = {
   id: string;
@@ -234,21 +262,50 @@ export type MemberAvailability = {
   eventTitle: string;
 };
 
-const availabilityByCategory: Record<CalendarEventCategory, Omit<MemberAvailability, "eventTitle"> & { priority: number }> = {
+const availabilityByCategory: Record<
+  CalendarEventCategory,
+  Omit<MemberAvailability, "eventTitle"> & { priority: number }
+> = {
   leave: { label: "휴가 중", emoji: "🌿", color: "#65a9ff", priority: 1 },
   travel: { label: "출장/여행 중", emoji: "✈️", color: "#9d83ff", priority: 2 },
-  conference: { label: "학회 참석", emoji: "🎤", color: "#55c9a5", priority: 3 },
-  deadline: { label: "집중 작업 중", emoji: "⏰", color: "#ff8a76", priority: 4 },
+  conference: {
+    label: "학회 참석",
+    emoji: "🎤",
+    color: "#55c9a5",
+    priority: 3,
+  },
+  deadline: {
+    label: "집중 작업 중",
+    emoji: "⏰",
+    color: "#ff8a76",
+    priority: 4,
+  },
   other: { label: "일정 있음", emoji: "📌", color: "#f5c842", priority: 5 },
 };
 
-export function getMemberAvailability(events: CalendarEvent[], userId: string, day = seoulDateKey(new Date())): MemberAvailability | null {
+export function getMemberAvailability(
+  events: CalendarEvent[],
+  userId: string,
+  day = seoulDateKey(new Date()),
+): MemberAvailability | null {
   const currentEvent = events
-    .filter((event) => event.userId === userId && event.startsOn <= day && event.endsOn >= day)
-    .sort((a, b) => availabilityByCategory[a.category].priority - availabilityByCategory[b.category].priority)[0];
+    .filter(
+      (event) =>
+        event.userId === userId && event.startsOn <= day && event.endsOn >= day,
+    )
+    .sort(
+      (a, b) =>
+        availabilityByCategory[a.category].priority -
+        availabilityByCategory[b.category].priority,
+    )[0];
   if (!currentEvent) return null;
   const availability = availabilityByCategory[currentEvent.category];
-  return { label: availability.label, emoji: availability.emoji, color: availability.color, eventTitle: currentEvent.title };
+  return {
+    label: availability.label,
+    emoji: availability.emoji,
+    color: availability.color,
+    eventTitle: currentEvent.title,
+  };
 }
 
 export type Mission = {
@@ -290,7 +347,9 @@ function mapCalendarEvent(row: Record<string, string>): CalendarEvent {
   };
 }
 
-function mapOnlineMeeting(row: Record<string, string | number | null>): OnlineMeeting {
+function mapOnlineMeeting(
+  row: Record<string, string | number | null>,
+): OnlineMeeting {
   return {
     id: String(row.id),
     creatorId: String(row.creator_id),
@@ -301,13 +360,17 @@ function mapOnlineMeeting(row: Record<string, string | number | null>): OnlineMe
     startsAt: String(row.starts_at),
     endedAt: typeof row.ended_at === "string" ? row.ended_at : null,
     notes: typeof row.meeting_notes === "string" ? row.meeting_notes : "",
-    notesUpdatedAt: typeof row.notes_updated_at === "string" ? row.notes_updated_at : null,
-    notesUpdatedBy: typeof row.notes_updated_by === "string" ? row.notes_updated_by : null,
+    notesUpdatedAt:
+      typeof row.notes_updated_at === "string" ? row.notes_updated_at : null,
+    notesUpdatedBy:
+      typeof row.notes_updated_by === "string" ? row.notes_updated_by : null,
     createdAt: String(row.created_at),
   };
 }
 
-function mapTeamProject(row: Record<string, string | number | boolean | null>): TeamProject {
+function mapTeamProject(
+  row: Record<string, string | number | boolean | null>,
+): TeamProject {
   return {
     id: String(row.id),
     ownerId: String(row.owner_id),
@@ -322,7 +385,9 @@ function mapTeamProject(row: Record<string, string | number | boolean | null>): 
   };
 }
 
-function mapTeamProjectTask(row: Record<string, string | boolean | null>): TeamProjectTask {
+function mapTeamProjectTask(
+  row: Record<string, string | boolean | null>,
+): TeamProjectTask {
   return {
     id: String(row.id),
     projectId: String(row.project_id),
@@ -340,10 +405,19 @@ export async function loadLabMembers(): Promise<LabMember[]> {
   const cached = validCache(membersCache);
   if (cached) return cached;
   const supabase = createClient();
-  let { data, error } = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config,lab_seat").order("created_at");
+  let { data, error } = await supabase
+    .from("profiles")
+    .select(
+      "id,name,role,status,initials,avatar_background,avatar_config,lab_seat",
+    )
+    .order("created_at");
   if (error?.code === "42703") {
-    const fallback = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config").order("created_at");
-    data = fallback.data?.map((profile) => ({ ...profile, lab_seat: null })) ?? null;
+    const fallback = await supabase
+      .from("profiles")
+      .select("id,name,role,status,initials,avatar_background,avatar_config")
+      .order("created_at");
+    data =
+      fallback.data?.map((profile) => ({ ...profile, lab_seat: null })) ?? null;
     error = fallback.error;
   }
   if (error) throw error;
@@ -362,16 +436,26 @@ export async function loadLabMembers(): Promise<LabMember[]> {
 }
 
 export async function saveLabSeat(userId: string, labSeat: number) {
-  if (!Number.isInteger(labSeat) || labSeat < 0 || labSeat > 7) throw new Error("Invalid lab seat");
+  if (!Number.isInteger(labSeat) || labSeat < 0 || labSeat > 7)
+    throw new Error("Invalid lab seat");
   const supabase = createClient();
-  const { error } = await supabase.from("profiles").update({ lab_seat: labSeat }).eq("id", userId);
+  const { error } = await supabase
+    .from("profiles")
+    .update({ lab_seat: labSeat })
+    .eq("id", userId);
   if (error) throw error;
   membersCache = null;
 }
 
-export async function saveAvatarConfig(userId: string, avatarConfig: AvatarConfig) {
+export async function saveAvatarConfig(
+  userId: string,
+  avatarConfig: AvatarConfig,
+) {
   const supabase = createClient();
-  const { error } = await supabase.from("profiles").update({ avatar_config: avatarConfig }).eq("id", userId);
+  const { error } = await supabase
+    .from("profiles")
+    .update({ avatar_config: avatarConfig })
+    .eq("id", userId);
   if (error) throw error;
   membersCache = null;
 }
@@ -380,13 +464,19 @@ export async function loadCalendarEvents(): Promise<CalendarEvent[]> {
   const cached = validCache(calendarEventsCache);
   if (cached) return cached;
   const supabase = createClient();
-  const { data, error } = await supabase.from("calendar_events")
-    .select("id,user_id,title,description,category,starts_on,ends_on,created_at")
+  const { data, error } = await supabase
+    .from("calendar_events")
+    .select(
+      "id,user_id,title,description,category,starts_on,ends_on,created_at",
+    )
     .order("starts_on", { ascending: true })
     .limit(500);
   if (error) throw error;
   const events = (data ?? []).map((row) => mapCalendarEvent(row));
-  calendarEventsCache = { value: events, expiresAt: Date.now() + DATA_CACHE_MS };
+  calendarEventsCache = {
+    value: events,
+    expiresAt: Date.now() + DATA_CACHE_MS,
+  };
   return events;
 }
 
@@ -399,14 +489,20 @@ export async function createCalendarEvent(input: {
   endsOn: string;
 }): Promise<CalendarEvent> {
   const supabase = createClient();
-  const { data, error } = await supabase.from("calendar_events").insert({
-    user_id: input.userId,
-    title: input.title,
-    description: input.description,
-    category: input.category,
-    starts_on: input.startsOn,
-    ends_on: input.endsOn,
-  }).select("id,user_id,title,description,category,starts_on,ends_on,created_at").single();
+  const { data, error } = await supabase
+    .from("calendar_events")
+    .insert({
+      user_id: input.userId,
+      title: input.title,
+      description: input.description,
+      category: input.category,
+      starts_on: input.startsOn,
+      ends_on: input.endsOn,
+    })
+    .select(
+      "id,user_id,title,description,category,starts_on,ends_on,created_at",
+    )
+    .single();
   if (error) throw error;
   calendarEventsCache = null;
   return mapCalendarEvent(data);
@@ -414,17 +510,26 @@ export async function createCalendarEvent(input: {
 
 export async function deleteCalendarEvent(eventId: string, userId: string) {
   const supabase = createClient();
-  const { error } = await supabase.from("calendar_events").delete().eq("id", eventId).eq("user_id", userId);
+  const { error } = await supabase
+    .from("calendar_events")
+    .delete()
+    .eq("id", eventId)
+    .eq("user_id", userId);
   if (error) throw error;
   calendarEventsCache = null;
 }
 
-export async function loadOnlineMeetings(projectId: string): Promise<OnlineMeeting[]> {
+export async function loadOnlineMeetings(
+  projectId: string,
+): Promise<OnlineMeeting[]> {
   const cached = validCache(onlineMeetingsCache.get(projectId));
   if (cached) return cached;
   const supabase = createClient();
-  const { data, error } = await supabase.from("online_meetings")
-    .select("id,creator_id,project_id,title,description,room_name,starts_at,ended_at,meeting_notes,notes_updated_at,notes_updated_by,created_at")
+  const { data, error } = await supabase
+    .from("online_meetings")
+    .select(
+      "id,creator_id,project_id,title,description,room_name,starts_at,ended_at,meeting_notes,notes_updated_at,notes_updated_by,created_at",
+    )
     .eq("project_id", projectId)
     .is("ended_at", null)
     .order("starts_at", { ascending: false })
@@ -432,14 +537,22 @@ export async function loadOnlineMeetings(projectId: string): Promise<OnlineMeeti
   if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
   if (error) throw error;
   const meetings = (data ?? []).map(mapOnlineMeeting);
-  onlineMeetingsCache.set(projectId, { value: meetings, expiresAt: Date.now() + DATA_CACHE_MS });
+  onlineMeetingsCache.set(projectId, {
+    value: meetings,
+    expiresAt: Date.now() + DATA_CACHE_MS,
+  });
   return meetings;
 }
 
-export async function loadProjectMeetingHistory(projectId: string): Promise<OnlineMeeting[]> {
+export async function loadProjectMeetingHistory(
+  projectId: string,
+): Promise<OnlineMeeting[]> {
   const supabase = createClient();
-  const { data, error } = await supabase.from("online_meetings")
-    .select("id,creator_id,project_id,title,description,room_name,starts_at,ended_at,meeting_notes,notes_updated_at,notes_updated_by,created_at")
+  const { data, error } = await supabase
+    .from("online_meetings")
+    .select(
+      "id,creator_id,project_id,title,description,room_name,starts_at,ended_at,meeting_notes,notes_updated_at,notes_updated_by,created_at",
+    )
     .eq("project_id", projectId)
     .not("ended_at", "is", null)
     .order("ended_at", { ascending: false })
@@ -449,7 +562,10 @@ export async function loadProjectMeetingHistory(projectId: string): Promise<Onli
   return (data ?? []).map(mapOnlineMeeting);
 }
 
-export async function saveProjectMeetingNotes(meetingId: string, notes: string): Promise<OnlineMeeting> {
+export async function saveProjectMeetingNotes(
+  meetingId: string,
+  notes: string,
+): Promise<OnlineMeeting> {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("save_project_meeting_notes", {
     target_meeting_id: meetingId,
@@ -460,9 +576,15 @@ export async function saveProjectMeetingNotes(meetingId: string, notes: string):
   return mapOnlineMeeting(data);
 }
 
-export async function startProjectMeeting(projectId: string, title: string): Promise<OnlineMeeting> {
+export async function startProjectMeeting(
+  projectId: string,
+  title: string,
+): Promise<OnlineMeeting> {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc("start_project_meeting", { target_project_id: projectId, meeting_title: title });
+  const { data, error } = await supabase.rpc("start_project_meeting", {
+    target_project_id: projectId,
+    meeting_title: title,
+  });
   if (error) throw error;
   onlineMeetingsCache.delete(projectId);
   return mapOnlineMeeting(data);
@@ -470,32 +592,43 @@ export async function startProjectMeeting(projectId: string, title: string): Pro
 
 export async function endProjectMeeting(meetingId: string, projectId: string) {
   const supabase = createClient();
-  const { error } = await supabase.rpc("end_project_meeting", { target_meeting_id: meetingId });
+  const { error } = await supabase.rpc("end_project_meeting", {
+    target_meeting_id: meetingId,
+  });
   if (error) throw error;
   onlineMeetingsCache.delete(projectId);
 }
 
 export async function loadTeamProjects(userId: string): Promise<TeamProject[]> {
   const supabase = createClient();
-  const { data: memberRows, error } = await supabase.from("team_project_members")
+  const { data: memberRows, error } = await supabase
+    .from("team_project_members")
     .select("project_id")
     .eq("user_id", userId)
     .eq("status", "accepted");
   if (error && ["PGRST205", "42P01"].includes(error.code)) return [];
   if (error) throw error;
-  const projectIds = [...new Set((memberRows ?? []).map((row) => row.project_id))];
+  const projectIds = [
+    ...new Set((memberRows ?? []).map((row) => row.project_id)),
+  ];
   if (projectIds.length === 0) return [];
-  const projects = await supabase.from("team_projects")
-    .select("id,owner_id,name,description,deadline,reward_points,status,completed_at,active,created_at")
+  const projects = await supabase
+    .from("team_projects")
+    .select(
+      "id,owner_id,name,description,deadline,reward_points,status,completed_at,active,created_at",
+    )
     .in("id", projectIds)
     .order("created_at", { ascending: false });
   if (projects.error) throw projects.error;
   return (projects.data ?? []).map(mapTeamProject);
 }
 
-export async function loadTeamProjectInvites(userId: string): Promise<TeamProjectInvite[]> {
+export async function loadTeamProjectInvites(
+  userId: string,
+): Promise<TeamProjectInvite[]> {
   const supabase = createClient();
-  const { data: rows, error } = await supabase.from("team_project_members")
+  const { data: rows, error } = await supabase
+    .from("team_project_members")
     .select("project_id,invited_by,created_at")
     .eq("user_id", userId)
     .eq("status", "invited")
@@ -506,23 +639,41 @@ export async function loadTeamProjectInvites(userId: string): Promise<TeamProjec
   const projectIds = [...new Set(rows.map((row) => row.project_id))];
   const hostIds = [...new Set(rows.map((row) => row.invited_by))];
   const [projects, hosts] = await Promise.all([
-    supabase.from("team_projects").select("id,owner_id,name,description,deadline,reward_points,status,completed_at,active,created_at").in("id", projectIds),
+    supabase
+      .from("team_projects")
+      .select(
+        "id,owner_id,name,description,deadline,reward_points,status,completed_at,active,created_at",
+      )
+      .in("id", projectIds),
     supabase.from("profiles").select("id,name").in("id", hostIds),
   ]);
   if (projects.error) throw projects.error;
   if (hosts.error) throw hosts.error;
   return rows.flatMap((row) => {
-    const projectRow = (projects.data ?? []).find((project) => project.id === row.project_id);
+    const projectRow = (projects.data ?? []).find(
+      (project) => project.id === row.project_id,
+    );
     if (!projectRow) return [];
-    const host = (hosts.data ?? []).find((profile) => profile.id === row.invited_by);
-    return [{ project: mapTeamProject(projectRow), hostName: host?.name ?? "Lab member", createdAt: row.created_at }];
+    const host = (hosts.data ?? []).find(
+      (profile) => profile.id === row.invited_by,
+    );
+    return [
+      {
+        project: mapTeamProject(projectRow),
+        hostName: host?.name ?? "Lab member",
+        createdAt: row.created_at,
+      },
+    ];
   });
 }
 
-export async function loadTeamProjectMembers(projectIds: string[]): Promise<TeamProjectMember[]> {
+export async function loadTeamProjectMembers(
+  projectIds: string[],
+): Promise<TeamProjectMember[]> {
   if (projectIds.length === 0) return [];
   const supabase = createClient();
-  const { data: rows, error } = await supabase.from("team_project_members")
+  const { data: rows, error } = await supabase
+    .from("team_project_members")
     .select("project_id,user_id,role,status")
     .in("project_id", projectIds)
     .in("status", ["invited", "accepted"]);
@@ -530,15 +681,37 @@ export async function loadTeamProjectMembers(projectIds: string[]): Promise<Team
   if (error) throw error;
   const userIds = [...new Set((rows ?? []).map((row) => row.user_id))];
   if (userIds.length === 0) return [];
-  const profiles = await supabase.from("profiles").select("id,name,role,status,initials,avatar_background,avatar_config,lab_seat").in("id", userIds);
+  const profiles = await supabase
+    .from("profiles")
+    .select(
+      "id,name,role,status,initials,avatar_background,avatar_config,lab_seat",
+    )
+    .in("id", userIds);
   if (profiles.error) throw profiles.error;
   return (rows ?? []).flatMap((row) => {
-    const profile = (profiles.data ?? []).find((item) => item.id === row.user_id);
+    const profile = (profiles.data ?? []).find(
+      (item) => item.id === row.user_id,
+    );
     if (!profile) return [];
-    return [{ projectId: row.project_id, userId: row.user_id, role: row.role as "host" | "member", status: row.status as "invited" | "accepted", member: {
-      id: profile.id, name: profile.name, role: profile.role, status: profile.status, initials: profile.initials,
-      avatarBackground: profile.avatar_background, avatarConfig: mapAvatarConfig(profile.avatar_config), labSeat: typeof profile.lab_seat === "number" ? profile.lab_seat : null,
-    } }];
+    return [
+      {
+        projectId: row.project_id,
+        userId: row.user_id,
+        role: row.role as "host" | "member",
+        status: row.status as "invited" | "accepted",
+        member: {
+          id: profile.id,
+          name: profile.name,
+          role: profile.role,
+          status: profile.status,
+          initials: profile.initials,
+          avatarBackground: profile.avatar_background,
+          avatarConfig: mapAvatarConfig(profile.avatar_config),
+          labSeat:
+            typeof profile.lab_seat === "number" ? profile.lab_seat : null,
+        },
+      },
+    ];
   });
 }
 
@@ -562,7 +735,10 @@ export async function createTeamProject(
   return mapTeamProject(data);
 }
 
-export async function renameTeamProject(projectId: string, name: string): Promise<TeamProject> {
+export async function renameTeamProject(
+  projectId: string,
+  name: string,
+): Promise<TeamProject> {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("rename_team_project", {
     target_project_id: projectId,
@@ -572,10 +748,15 @@ export async function renameTeamProject(projectId: string, name: string): Promis
   return mapTeamProject(data);
 }
 
-export async function loadTeamProjectTasks(projectId: string): Promise<TeamProjectTask[]> {
+export async function loadTeamProjectTasks(
+  projectId: string,
+): Promise<TeamProjectTask[]> {
   const supabase = createClient();
-  const { data, error } = await supabase.from("team_project_tasks")
-    .select("id,project_id,title,description,assignee_id,due_on,completed,completed_at,created_at")
+  const { data, error } = await supabase
+    .from("team_project_tasks")
+    .select(
+      "id,project_id,title,description,assignee_id,due_on,completed,completed_at,created_at",
+    )
     .eq("project_id", projectId)
     .order("completed", { ascending: true })
     .order("due_on", { ascending: true })
@@ -604,41 +785,64 @@ export async function createTeamProjectTask(input: {
   return mapTeamProjectTask(data);
 }
 
-export async function setTeamProjectTaskCompleted(taskId: string, completed: boolean): Promise<TeamProjectTask> {
+export async function setTeamProjectTaskCompleted(
+  taskId: string,
+  completed: boolean,
+): Promise<TeamProjectTask> {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc("set_team_project_task_completed", {
-    target_task_id: taskId,
-    is_completed: completed,
-  });
+  const { data, error } = await supabase.rpc(
+    "set_team_project_task_completed",
+    {
+      target_task_id: taskId,
+      is_completed: completed,
+    },
+  );
   if (error) throw error;
   return mapTeamProjectTask(data);
 }
 
 export async function deleteTeamProjectTask(taskId: string) {
   const supabase = createClient();
-  const { error } = await supabase.rpc("delete_team_project_task", { target_task_id: taskId });
+  const { error } = await supabase.rpc("delete_team_project_task", {
+    target_task_id: taskId,
+  });
   if (error) throw error;
 }
 
-export async function completeTeamProject(projectId: string): Promise<TeamProject> {
+export async function completeTeamProject(
+  projectId: string,
+): Promise<TeamProject> {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc("complete_team_project", { target_project_id: projectId });
+  const { data, error } = await supabase.rpc("complete_team_project", {
+    target_project_id: projectId,
+  });
   if (error) throw error;
   notificationsCache.clear();
   return mapTeamProject(data);
 }
 
-export async function loadTeamProjectRewardTotal(userId: string): Promise<number> {
+export async function loadTeamProjectRewardTotal(
+  userId: string,
+): Promise<number> {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc("get_team_project_reward_total", { target_user_id: userId });
+  const { data, error } = await supabase.rpc("get_team_project_reward_total", {
+    target_user_id: userId,
+  });
   if (error && ["PGRST202", "42883"].includes(error.code)) return 0;
   if (error) throw error;
   return Number(data ?? 0);
 }
 
-export async function respondToTeamProjectInvite(projectId: string, response: "accepted" | "declined", userId: string) {
+export async function respondToTeamProjectInvite(
+  projectId: string,
+  response: "accepted" | "declined",
+  userId: string,
+) {
   const supabase = createClient();
-  const { error } = await supabase.rpc("respond_to_team_project_invite", { target_project_id: projectId, response_status: response });
+  const { error } = await supabase.rpc("respond_to_team_project_invite", {
+    target_project_id: projectId,
+    response_status: response,
+  });
   if (error) throw error;
   notificationsCache.delete(userId);
 }
@@ -656,24 +860,34 @@ export async function createDailyPost(
   const rawExtension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const extension = rawExtension.replace(/[^a-z0-9]/g, "") || "jpg";
   const imagePath = `${memberId}/${crypto.randomUUID()}.${extension}`;
-  const { error: uploadError } = await supabase.storage.from("post-images").upload(imagePath, file, { contentType: file.type, upsert: false });
+  const { error: uploadError } = await supabase.storage
+    .from("post-images")
+    .upload(imagePath, file, { contentType: file.type, upsert: false });
   if (uploadError) throw uploadError;
 
-  const { data, error: postError } = await supabase.from("posts").insert({
-    user_id: memberId,
-    post_kind: kind,
-    moment_category: kind === "moment" ? momentCategory : null,
-    mission_id: missionId,
-    caption,
-    status,
-    image_path: imagePath,
-  }).select("id,user_id,post_kind,moment_category,mission_id,mission_title,score_awarded,caption,status,image_path,created_at").single();
+  const { data, error: postError } = await supabase
+    .from("posts")
+    .insert({
+      user_id: memberId,
+      post_kind: kind,
+      moment_category: kind === "moment" ? momentCategory : null,
+      mission_id: missionId,
+      caption,
+      status,
+      image_path: imagePath,
+    })
+    .select(
+      "id,user_id,post_kind,moment_category,mission_id,mission_title,score_awarded,caption,status,image_path,created_at",
+    )
+    .single();
   if (postError) {
     await supabase.storage.from("post-images").remove([imagePath]);
     throw postError;
   }
   invalidatePostCaches(memberId);
-  const { data: publicImage } = supabase.storage.from("post-images").getPublicUrl(data.image_path);
+  const { data: publicImage } = supabase.storage
+    .from("post-images")
+    .getPublicUrl(data.image_path);
   return {
     id: data.id,
     memberId: data.user_id,
@@ -697,20 +911,38 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
   const cached = validCache(dailyPostsCache);
   if (cached) return cached;
   const supabase = createClient();
-  const { data, error } = await supabase.from("posts").select("id,user_id,post_kind,moment_category,mission_id,mission_title,score_awarded,caption,status,image_path,created_at").order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("posts")
+    .select(
+      "id,user_id,post_kind,moment_category,mission_id,mission_title,score_awarded,caption,status,image_path,created_at",
+    )
+    .order("created_at", { ascending: false });
   if (error) throw error;
   const posts = data ?? [];
   if (posts.length === 0) return [];
   const postIds = posts.map((post) => post.id);
-  const [{ data: reactionRows, error: reactionError }, { data: commentRows, error: commentError }] = await Promise.all([
-    supabase.from("post_reactions").select("post_id,user_id,emoji").in("post_id", postIds),
-    supabase.from("post_comments").select("id,post_id,user_id,body,created_at").in("post_id", postIds).order("created_at"),
+  const [
+    { data: reactionRows, error: reactionError },
+    { data: commentRows, error: commentError },
+  ] = await Promise.all([
+    supabase
+      .from("post_reactions")
+      .select("post_id,user_id,emoji")
+      .in("post_id", postIds),
+    supabase
+      .from("post_comments")
+      .select("id,post_id,user_id,body,created_at")
+      .in("post_id", postIds)
+      .order("created_at"),
   ]);
-  const isMissingTable = (code?: string) => code === "PGRST205" || code === "42P01";
+  const isMissingTable = (code?: string) =>
+    code === "PGRST205" || code === "42P01";
   if (reactionError && !isMissingTable(reactionError.code)) throw reactionError;
   if (commentError && !isMissingTable(commentError.code)) throw commentError;
   const mappedPosts = posts.map((post) => {
-    const { data: publicImage } = supabase.storage.from("post-images").getPublicUrl(post.image_path);
+    const { data: publicImage } = supabase.storage
+      .from("post-images")
+      .getPublicUrl(post.image_path);
     return {
       id: post.id,
       memberId: post.user_id,
@@ -725,31 +957,50 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
       imageDataUrl: publicImage.publicUrl,
       background: "linear-gradient(145deg, #292524, #57534e)",
       emoji: "\u2728",
-      reactions: (reactionRows ?? []).filter((item) => item.post_id === post.id).map((item) => ({
-        userId: item.user_id,
-        emoji: item.emoji,
-      })),
-      comments: (commentRows ?? []).filter((item) => item.post_id === post.id).map((item) => ({
-        id: item.id, userId: item.user_id, body: item.body, createdAt: item.created_at,
-      })),
+      reactions: (reactionRows ?? [])
+        .filter((item) => item.post_id === post.id)
+        .map((item) => ({
+          userId: item.user_id,
+          emoji: item.emoji,
+        })),
+      comments: (commentRows ?? [])
+        .filter((item) => item.post_id === post.id)
+        .map((item) => ({
+          id: item.id,
+          userId: item.user_id,
+          body: item.body,
+          createdAt: item.created_at,
+        })),
     };
   });
-  dailyPostsCache = { value: mappedPosts, expiresAt: Date.now() + DATA_CACHE_MS };
+  dailyPostsCache = {
+    value: mappedPosts,
+    expiresAt: Date.now() + DATA_CACHE_MS,
+  };
   return mappedPosts;
 }
 
-export async function loadMissionActivity(userId: string): Promise<MissionActivity[]> {
+export async function loadMissionActivity(
+  userId: string,
+): Promise<MissionActivity[]> {
   const cached = validCache(missionActivityCache.get(userId));
   if (cached) return cached;
   const supabase = createClient();
-  const { data, error } = await supabase.from("posts")
+  const { data, error } = await supabase
+    .from("posts")
     .select("mission_id,created_at")
     .eq("user_id", userId)
     .eq("post_kind", "work")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  const activity = (data ?? []).map((post) => ({ missionId: post.mission_id, createdAt: post.created_at }));
-  missionActivityCache.set(userId, { value: activity, expiresAt: Date.now() + DATA_CACHE_MS });
+  const activity = (data ?? []).map((post) => ({
+    missionId: post.mission_id,
+    createdAt: post.created_at,
+  }));
+  missionActivityCache.set(userId, {
+    value: activity,
+    expiresAt: Date.now() + DATA_CACHE_MS,
+  });
   return activity;
 }
 
@@ -757,13 +1008,18 @@ export async function loadCalendarPosts(userId: string): Promise<DailyPost[]> {
   const cached = validCache(calendarPostsCache.get(userId));
   if (cached) return cached;
   const supabase = createClient();
-  const { data, error } = await supabase.from("posts")
-    .select("id,user_id,post_kind,moment_category,mission_id,mission_title,score_awarded,caption,status,image_path,created_at")
+  const { data, error } = await supabase
+    .from("posts")
+    .select(
+      "id,user_id,post_kind,moment_category,mission_id,mission_title,score_awarded,caption,status,image_path,created_at",
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;
   const calendarPosts = (data ?? []).map((post) => {
-    const { data: publicImage } = supabase.storage.from("post-images").getPublicUrl(post.image_path);
+    const { data: publicImage } = supabase.storage
+      .from("post-images")
+      .getPublicUrl(post.image_path);
     return {
       id: post.id,
       memberId: post.user_id,
@@ -782,12 +1038,21 @@ export async function loadCalendarPosts(userId: string): Promise<DailyPost[]> {
       comments: [],
     } satisfies DailyPost;
   });
-  calendarPostsCache.set(userId, { value: calendarPosts, expiresAt: Date.now() + DATA_CACHE_MS });
+  calendarPostsCache.set(userId, {
+    value: calendarPosts,
+    expiresAt: Date.now() + DATA_CACHE_MS,
+  });
   return calendarPosts;
 }
 
-export function formatPostDate(value: string) {
-  return new Intl.DateTimeFormat("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+export function formatPostDate(
+  value: string,
+  locale: "ko" | "vi" | "en" = "ko",
+) {
+  return new Intl.DateTimeFormat(
+    locale === "vi" ? "vi-VN" : locale === "en" ? "en-US" : "ko-KR",
+    { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" },
+  ).format(new Date(value));
 }
 
 export function seoulDateKey(value: Date) {
@@ -799,14 +1064,27 @@ export function seoulDateKey(value: Date) {
   }).format(value);
 }
 
-export function hasMissionUpdateToday(posts: MissionActivity[], missionId: string, now = new Date()) {
+export function hasMissionUpdateToday(
+  posts: MissionActivity[],
+  missionId: string,
+  now = new Date(),
+) {
   const today = seoulDateKey(now);
-  return posts.some((post) => post.missionId === missionId && seoulDateKey(new Date(post.createdAt)) === today);
+  return posts.some(
+    (post) =>
+      post.missionId === missionId &&
+      seoulDateKey(new Date(post.createdAt)) === today,
+  );
 }
 
-export function countMissionUpdateDays(posts: MissionActivity[], missionId: string) {
+export function countMissionUpdateDays(
+  posts: MissionActivity[],
+  missionId: string,
+) {
   return new Set(
-    posts.filter((post) => post.missionId === missionId).map((post) => seoulDateKey(new Date(post.createdAt))),
+    posts
+      .filter((post) => post.missionId === missionId)
+      .map((post) => seoulDateKey(new Date(post.createdAt))),
   ).size;
 }
 
@@ -814,8 +1092,11 @@ export async function loadActiveMissions(userId: string): Promise<Mission[]> {
   const cached = validCache(activeMissionsCache.get(userId));
   if (cached) return cached;
   const supabase = createClient();
-  const { data, error } = await supabase.from("missions")
-    .select("id,user_id,title,duration_days,points_per_update,started_on,ends_on,active,created_at")
+  const { data, error } = await supabase
+    .from("missions")
+    .select(
+      "id,user_id,title,duration_days,points_per_update,started_on,ends_on,active,created_at",
+    )
     .eq("user_id", userId)
     .eq("active", true)
     .gte("ends_on", seoulDateKey(new Date()))
@@ -823,11 +1104,16 @@ export async function loadActiveMissions(userId: string): Promise<Mission[]> {
     .limit(20);
   if (error && error.code !== "PGRST205") throw error;
   const missions = (data ?? []).map(mapMission);
-  activeMissionsCache.set(userId, { value: missions, expiresAt: Date.now() + DATA_CACHE_MS });
+  activeMissionsCache.set(userId, {
+    value: missions,
+    expiresAt: Date.now() + DATA_CACHE_MS,
+  });
   return missions;
 }
 
-export async function loadActiveMission(userId: string): Promise<Mission | null> {
+export async function loadActiveMission(
+  userId: string,
+): Promise<Mission | null> {
   const missions = await loadActiveMissions(userId);
   return missions[0] ?? null;
 }
@@ -839,7 +1125,10 @@ export function missionPointsForDuration(durationDays: number) {
   return Math.min(10, 5 + Math.ceil((durationDays - 30) / 30));
 }
 
-export async function addMission(title: string, durationDays: number): Promise<Mission> {
+export async function addMission(
+  title: string,
+  durationDays: number,
+): Promise<Mission> {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("set_my_mission", {
     mission_title: title,
@@ -859,14 +1148,29 @@ function addDays(value: Date, days: number) {
   return result;
 }
 
-export function hasPostedToday(posts: DailyPost[], memberId: string, now = new Date()) {
+export function hasPostedToday(
+  posts: DailyPost[],
+  memberId: string,
+  now = new Date(),
+) {
   const today = seoulDateKey(now);
-  return posts.some((post) => post.kind === "work" && post.memberId === memberId && seoulDateKey(new Date(post.createdAt)) === today);
+  return posts.some(
+    (post) =>
+      post.kind === "work" &&
+      post.memberId === memberId &&
+      seoulDateKey(new Date(post.createdAt)) === today,
+  );
 }
 
-export function calculateCurrentStreak(posts: DailyPost[], memberId: string, now = new Date()) {
+export function calculateCurrentStreak(
+  posts: DailyPost[],
+  memberId: string,
+  now = new Date(),
+) {
   const activeDays = new Set(
-    posts.filter((post) => post.kind === "work" && post.memberId === memberId).map((post) => seoulDateKey(new Date(post.createdAt))),
+    posts
+      .filter((post) => post.kind === "work" && post.memberId === memberId)
+      .map((post) => seoulDateKey(new Date(post.createdAt))),
   );
   let cursor = now;
   if (!activeDays.has(seoulDateKey(cursor))) cursor = addDays(cursor, -1);
@@ -879,62 +1183,106 @@ export function calculateCurrentStreak(posts: DailyPost[], memberId: string, now
   return streak;
 }
 
-export async function setPostReaction(postId: string, userId: string, emoji: string | null) {
+export async function setPostReaction(
+  postId: string,
+  userId: string,
+  emoji: string | null,
+) {
   const supabase = createClient();
   if (!emoji) {
-    const { error } = await supabase.from("post_reactions").delete().eq("post_id", postId).eq("user_id", userId);
+    const { error } = await supabase
+      .from("post_reactions")
+      .delete()
+      .eq("post_id", postId)
+      .eq("user_id", userId);
     if (error) throw error;
     dailyPostsCache = null;
     return;
   }
-  const { error } = await supabase.from("post_reactions").upsert(
-    { post_id: postId, user_id: userId, emoji },
-    { onConflict: "post_id,user_id" },
-  );
+  const { error } = await supabase
+    .from("post_reactions")
+    .upsert(
+      { post_id: postId, user_id: userId, emoji },
+      { onConflict: "post_id,user_id" },
+    );
   if (error) throw error;
   dailyPostsCache = null;
 }
 
-export async function createPostComment(postId: string, userId: string, body: string): Promise<PostComment> {
+export async function createPostComment(
+  postId: string,
+  userId: string,
+  body: string,
+): Promise<PostComment> {
   const supabase = createClient();
-  const { data, error } = await supabase.from("post_comments")
+  const { data, error } = await supabase
+    .from("post_comments")
     .insert({ post_id: postId, user_id: userId, body })
     .select("id,user_id,body,created_at")
     .single();
   if (error) throw error;
   dailyPostsCache = null;
-  return { id: data.id, userId: data.user_id, body: data.body, createdAt: data.created_at };
+  return {
+    id: data.id,
+    userId: data.user_id,
+    body: data.body,
+    createdAt: data.created_at,
+  };
 }
 
-export async function loadNotifications(userId: string): Promise<LabNotification[]> {
+export async function loadNotifications(
+  userId: string,
+): Promise<LabNotification[]> {
   const cached = validCache(notificationsCache.get(userId));
   if (cached) return cached;
   const supabase = createClient();
-  let { data, error } = await supabase.from("notifications")
-    .select("id,type,emoji,comment_preview,post_id,actor_id,mission_id,mission_title,project_id,project_title,created_at,read_at")
+  let { data, error } = await supabase
+    .from("notifications")
+    .select(
+      "id,type,emoji,comment_preview,post_id,actor_id,mission_id,mission_title,project_id,project_title,created_at,read_at",
+    )
     .eq("recipient_id", userId)
     .neq("type", "mission_invite")
     .order("created_at", { ascending: false })
     .limit(30);
   if (error?.code === "42703") {
-    const fallback = await supabase.from("notifications")
-      .select("id,type,emoji,comment_preview,post_id,actor_id,mission_id,mission_title,created_at,read_at")
+    const fallback = await supabase
+      .from("notifications")
+      .select(
+        "id,type,emoji,comment_preview,post_id,actor_id,mission_id,mission_title,created_at,read_at",
+      )
       .eq("recipient_id", userId)
       .neq("type", "mission_invite")
       .order("created_at", { ascending: false })
       .limit(30);
-    data = fallback.data?.map((item) => ({ ...item, project_id: null, project_title: null })) ?? null;
+    data =
+      fallback.data?.map((item) => ({
+        ...item,
+        project_id: null,
+        project_title: null,
+      })) ?? null;
     error = fallback.error;
   }
   if (error) throw error;
   const rows = data ?? [];
-  const actorIds = [...new Set(rows.map((item) => item.actor_id).filter((id): id is string => Boolean(id)))];
+  const actorIds = [
+    ...new Set(
+      rows
+        .map((item) => item.actor_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
   const result = actorIds.length
-    ? await supabase.from("profiles").select("id,name,initials,avatar_background,avatar_config").in("id", actorIds)
+    ? await supabase
+        .from("profiles")
+        .select("id,name,initials,avatar_background,avatar_config")
+        .in("id", actorIds)
     : { data: [], error: null };
   if (result.error) throw result.error;
   const notifications = rows.map((item) => {
-    const actor = (result.data ?? []).find((profile) => profile.id === item.actor_id);
+    const actor = (result.data ?? []).find(
+      (profile) => profile.id === item.actor_id,
+    );
     return {
       id: item.id,
       type: item.type as LabNotification["type"],
@@ -948,13 +1296,17 @@ export async function loadNotifications(userId: string): Promise<LabNotification
       projectTitle: item.project_title,
       actorName: actor?.name ?? "Lab member",
       actorInitials: actor?.initials ?? "LB",
-      actorAvatarBackground: actor?.avatar_background ?? "linear-gradient(135deg, #ffd84d, #ff8a4c)",
+      actorAvatarBackground:
+        actor?.avatar_background ?? "linear-gradient(135deg, #ffd84d, #ff8a4c)",
       actorAvatarConfig: mapAvatarConfig(actor?.avatar_config),
       createdAt: item.created_at,
       readAt: item.read_at,
     };
   });
-  notificationsCache.set(userId, { value: notifications, expiresAt: Date.now() + DATA_CACHE_MS });
+  notificationsCache.set(userId, {
+    value: notifications,
+    expiresAt: Date.now() + DATA_CACHE_MS,
+  });
   return notifications;
 }
 
@@ -966,10 +1318,14 @@ export async function ensureDailyStreakReminder() {
   reminderCheckedAt = Date.now();
 }
 
-export async function markNotificationsRead(userId: string, notificationIds: string[]) {
+export async function markNotificationsRead(
+  userId: string,
+  notificationIds: string[],
+) {
   if (notificationIds.length === 0) return;
   const supabase = createClient();
-  const { error } = await supabase.from("notifications")
+  const { error } = await supabase
+    .from("notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("recipient_id", userId)
     .in("id", notificationIds);
@@ -979,7 +1335,9 @@ export async function markNotificationsRead(userId: string, notificationIds: str
     const ids = new Set(notificationIds);
     const readAt = new Date().toISOString();
     notificationsCache.set(userId, {
-      value: cached.map((item) => ids.has(item.id) ? { ...item, readAt } : item),
+      value: cached.map((item) =>
+        ids.has(item.id) ? { ...item, readAt } : item,
+      ),
       expiresAt: Date.now() + DATA_CACHE_MS,
     });
   }

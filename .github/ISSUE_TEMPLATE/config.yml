@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Setup and support
+    url: https://github.com/nguyenthingocduyen0405/lablog/discussions
+    about: Ask a question or discuss an implementation idea.
+  - name: Security vulnerability
+    url: https://github.com/nguyenthingocduyen0405/lablog/security/advisories/new
+    about: Report a vulnerability privately.
