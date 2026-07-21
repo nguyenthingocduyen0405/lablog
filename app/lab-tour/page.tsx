@@ -11,11 +11,11 @@ import { DEFAULT_AVATAR_CONFIG, loadLabMembers, saveLabSeat, type LabMember } fr
 type TourStage = "overview" | "seat" | "introductions" | "game" | "complete";
 
 const labObjects = [
-  { id: "bookshelf", label: "책장", emoji: "📚", x: 18, y: 34, scale: 1, hint: "왼쪽 벽을 따라 길게 놓여 있어요." },
-  { id: "meeting", label: "회의 테이블", emoji: "🗂️", x: 25, y: 49, scale: 1, hint: "책장 앞쪽의 긴 테이블을 찾아보세요." },
-  { id: "trash", label: "쓰레기통", emoji: "🗑️", x: 51, y: 70, scale: 1, hint: "첫 번째 자리보다 앞쪽에 있어요." },
-  { id: "water", label: "정수기", emoji: "🚰", x: 59, y: 68, scale: 1, hint: "쓰레기통과 전자레인지 사이에 있어요." },
-  { id: "microwave", label: "전자레인지", emoji: "📻", x: 70, y: 64, scale: 1, hint: "설비 줄의 오른쪽 조리대 위에 있어요." },
+  { id: "bookshelf", label: "책장", emoji: "📚", x: 18.5, y: 43, width: 13, height: 36, hint: "왼쪽 벽을 따라 길게 놓여 있어요." },
+  { id: "meeting", label: "회의 테이블", emoji: "🗂️", x: 27, y: 47, width: 15, height: 11, hint: "책장 앞쪽의 긴 테이블을 찾아보세요." },
+  { id: "trash", label: "쓰레기통", emoji: "🗑️", x: 52.5, y: 69, width: 11, height: 19, hint: "첫 번째 자리보다 앞쪽에 있어요." },
+  { id: "water", label: "정수기", emoji: "🚰", x: 61.3, y: 66.5, width: 8.5, height: 21, hint: "쓰레기통과 전자레인지 사이에 있어요." },
+  { id: "microwave", label: "전자레인지", emoji: "📻", x: 71.5, y: 64, width: 13, height: 14, hint: "설비 줄의 오른쪽 조리대 위에 있어요." },
 ] as const;
 
 export default function LabTourPage() {
@@ -132,12 +132,12 @@ export default function LabTourPage() {
       </header>
 
       <section className="relative z-10 mx-auto flex min-h-[calc(100vh-72px)] max-w-7xl items-center justify-center px-3 pb-32 sm:px-8 sm:pb-28">
-        <div className="relative h-[60vh] min-h-[31rem] w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#d9dcd8] shadow-[0_35px_120px_rgba(0,0,0,.55)] sm:h-[70vh]">
+        <div className="relative aspect-[1672/941] w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#d9dcd8] shadow-[0_35px_120px_rgba(0,0,0,.55)]" style={{ width: "min(100%, calc((100vh - 13rem) * 1672 / 941))" }}>
           <div className="absolute inset-0 origin-center transition-transform duration-700 ease-out" style={{ transform: `translateX(${cameraShift}%) scale(${stage === "introductions" ? 1.035 : 1})` }}>
             <LabRoomMap members={members} currentUserId={user.id} focusedSeat={stage === "introductions" ? speakerIndex : null} selectedSeat={stage === "seat" ? selectedSeat : null} interactive={stage === "seat"} onSeatSelect={(seatIndex) => { setSelectedSeat(seatIndex); setSeatMessage(""); }}>
               {labObjects.map((object) => {
                 const found = foundObjects.includes(object.id);
-                return <button key={object.id} type="button" disabled={stage !== "game" || found} onClick={() => selectObject(object.id)} aria-label={object.label} className={`absolute z-[45] h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-2xl transition sm:h-20 sm:w-20 ${stage === "game" && !found ? "cursor-pointer hover:bg-[#ffd84d]/20 hover:ring-2 hover:ring-[#ffd84d]" : "pointer-events-none cursor-default"} ${found ? "bg-emerald-400/70 text-white ring-2 ring-white" : "bg-transparent"}`} style={{ left: `${object.x}%`, top: `${object.y}%`, transform: `translate(-50%, -50%) scale(${object.scale})` }}>{found && <span className="text-2xl font-black">✓</span>}</button>;
+                return <button key={object.id} type="button" disabled={stage !== "game" || found} onClick={() => selectObject(object.id)} aria-label={object.label} className={`absolute z-[45] min-h-11 min-w-11 -translate-x-1/2 -translate-y-1/2 rounded-[1.25rem] transition duration-200 ${stage === "game" && !found ? "cursor-pointer hover:bg-[#ffd84d]/20 hover:ring-2 hover:ring-[#ffd84d]" : "pointer-events-none cursor-default"} ${found ? "bg-emerald-400/70 text-white ring-2 ring-white" : "bg-transparent"}`} style={{ left: `${object.x}%`, top: `${object.y}%`, width: `${object.width}%`, height: `${object.height}%`, transform: "translate(-50%, -50%)" }}>{found && <span className="text-2xl font-black">✓</span>}</button>;
               })}
             </LabRoomMap>
           </div>
