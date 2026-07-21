@@ -18,7 +18,7 @@ export default function LabRoomMap({ members, currentUserId, focusedSeat = null,
 
   return (
     <div className="absolute inset-0">
-      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/lab-tour-room-v2.png')" }} />
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/lab-tour-room-v4.png')" }} />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-white/5" />
       {LAB_SEATS.map((seat, index) => {
         const member = roomMembers[index];
