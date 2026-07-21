@@ -1,7 +1,7 @@
 import { mapAvatarConfig, type LabMember } from "./lab-social";
 import { createClient } from "./supabase/client";
 
-export type AuthUser = LabMember & { email: string; onboardingCompletedAt: string | null; chapterTwoCompletedAt: string | null };
+export type AuthUser = LabMember & { email: string; onboardingCompletedAt: string | null; chapterTwoCompletedAt: string | null; chapterThreeCompletedAt: string | null };
 
 const avatarBackgrounds = [
   "linear-gradient(135deg, #ffd84d, #ff8a4c)",
@@ -34,6 +34,7 @@ function mapProfile(profile: Record<string, unknown>, email = ""): AuthUser {
     labSeat: typeof profile.lab_seat === "number" ? profile.lab_seat : null,
     onboardingCompletedAt: typeof profile.onboarding_completed_at === "string" ? profile.onboarding_completed_at : null,
     chapterTwoCompletedAt: null,
+    chapterThreeCompletedAt: null,
   };
 }
 
@@ -90,6 +91,9 @@ async function fetchCurrentUser(): Promise<AuthUser | null> {
     chapterTwoCompletedAt: typeof authData.user.user_metadata?.labquest_chapter2_completed_at === "string"
       ? authData.user.user_metadata.labquest_chapter2_completed_at
       : null,
+    chapterThreeCompletedAt: typeof authData.user.user_metadata?.labquest_chapter3_completed_at === "string"
+      ? authData.user.user_metadata.labquest_chapter3_completed_at
+      : null,
   };
   currentUserCache = { value: user, expiresAt: Date.now() + USER_CACHE_MS };
   return user;
@@ -137,6 +141,23 @@ export async function completeChapterTwo(userId: string) {
     };
   }
 }
+export async function completeChapterThree(userId: string) {
+  const completedAt = new Date().toISOString();
+  const supabase = createClient();
+  const { error } = await supabase.auth.updateUser({
+    data: { labquest_chapter3_completed_at: completedAt },
+  });
+  if (error) throw error;
+  const { error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError) throw refreshError;
+  if (currentUserCache?.value.id === userId) {
+    currentUserCache = {
+      value: { ...currentUserCache.value, chapterThreeCompletedAt: completedAt },
+      expiresAt: Date.now() + USER_CACHE_MS,
+    };
+  }
+}
+
 export async function logoutAccount() {
   currentUserCache = null;
   currentUserRequest = null;

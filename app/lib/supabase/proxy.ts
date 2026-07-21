@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 type LabQuestClaims = {
   sub?: string;
-  user_metadata?: { labquest_chapter2_completed_at?: unknown };
+  user_metadata?: { labquest_chapter2_completed_at?: unknown; labquest_chapter3_completed_at?: unknown };
 };
 
 export async function updateSession(request: NextRequest) {
@@ -27,6 +27,7 @@ export async function updateSession(request: NextRequest) {
   const claims = data?.claims as LabQuestClaims | undefined;
   const isAuthenticated = Boolean(claims?.sub);
   const chapterTwoCompleted = typeof claims?.user_metadata?.labquest_chapter2_completed_at === "string";
+  const chapterThreeCompleted = typeof claims?.user_metadata?.labquest_chapter3_completed_at === "string";
   const path = request.nextUrl.pathname;
   const memberPathId = path.startsWith("/members/") ? decodeURIComponent(path.split("/")[2] ?? "") : null;
   const isAuthPage = path === "/login" || path === "/signup";
@@ -40,8 +41,16 @@ export async function updateSession(request: NextRequest) {
     destination.searchParams.set("locked", path.slice(1));
     return NextResponse.redirect(destination);
   }
-  if (isAuthenticated && path === "/meeting") {
-    return NextResponse.redirect(new URL(`/members/${claims?.sub}?locked=project`, request.url));
+  if (isAuthenticated && path === "/meeting" && !chapterTwoCompleted) {
+    const destination = new URL("/labquest", request.url);
+    destination.searchParams.set("chapter", "2");
+    destination.searchParams.set("locked", "project");
+    return NextResponse.redirect(destination);
+  }
+  if (isAuthenticated && path === "/meeting" && !chapterThreeCompleted) {
+    const destination = new URL("/labquest", request.url);
+    destination.searchParams.set("chapter", "3");
+    return NextResponse.redirect(destination);
   }
   if (isAuthenticated && memberPathId && memberPathId !== claims?.sub && !chapterTwoCompleted) {
     return NextResponse.redirect(new URL(`/members/${claims?.sub}?locked=team`, request.url));

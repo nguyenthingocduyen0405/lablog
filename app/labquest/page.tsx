@@ -3,10 +3,11 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { completeChapterTwo, completeOnboarding, getCurrentUser, type AuthUser } from "../lib/auth";
+import { completeChapterThree, completeChapterTwo, completeOnboarding, getCurrentUser, type AuthUser } from "../lib/auth";
 import ChapterTwo from "./chapter-two";
+import ChapterThree from "./chapter-three";
 
-type Screen = "loading" | "intro" | "map" | "m1" | "r1" | "m2" | "r2" | "m3" | "r3" | "m4" | "complete" | "c2" | "saving";
+type Screen = "loading" | "intro" | "map" | "m1" | "r1" | "m2" | "r2" | "m3" | "r3" | "m4" | "complete" | "c2" | "c3" | "saving";
 type Pair = { id: string; device: string; deviceKo: string; abstraction: string; abstractionEn: string; icon: string };
 
 const PAIRS: Pair[] = [
@@ -40,10 +41,17 @@ export default function LabQuestChapterOnePage() {
       const saved = window.localStorage.getItem(`labquest-chapter1-${currentUser.id}`);
       const progress = saved ? (JSON.parse(saved) as number[]) : [];
       setCompleted(progress.filter((value) => [1, 2, 3, 4].includes(value)));
-      const chapterTwoRequested = new URLSearchParams(window.location.search).get("chapter") === "2";
+      const requestedChapter = new URLSearchParams(window.location.search).get("chapter");
+      const chapterTwoRequested = requestedChapter === "2";
+      const chapterThreeRequested = requestedChapter === "3";
       const chapterOneStarted = window.localStorage.getItem(`labquest-chapter1-started-${currentUser.id}`) === "true";
+      if (chapterThreeRequested && currentUser.chapterTwoCompletedAt) {
+        setScreen("c3");
+        return;
+      }
       if (progress.includes(4)) {
-        if (chapterTwoRequested) setScreen("c2");
+        if (chapterThreeRequested) setScreen(currentUser.chapterTwoCompletedAt ? "c3" : "c2");
+        else if (chapterTwoRequested) setScreen("c2");
         else if (currentUser.onboardingCompletedAt) router.replace(`/members/${currentUser.id}`);
         else setScreen("complete");
         return;
@@ -80,6 +88,7 @@ export default function LabQuestChapterOnePage() {
   }
 
   if (screen === "loading" || !user) return <Loading />;
+  if (screen === "c3") return <ChapterThree userId={user.id} chapterCompleted={Boolean(user.chapterThreeCompletedAt)} onBackToLabLog={() => router.push("/members/" + user.id)} onOpenProject={() => router.push("/meeting")} onUnlocked={async () => { await completeChapterThree(user.id); setUser({ ...user, chapterThreeCompletedAt: new Date().toISOString() }); }} />;
   if (screen === "c2") return <ChapterTwo userId={user.id} chapterCompleted={Boolean(user.chapterTwoCompletedAt)} onBackToLabLog={() => router.push(`/members/${user.id}`)} onUnlocked={async () => { if (!user.onboardingCompletedAt) await completeOnboarding(user.id); await completeChapterTwo(user.id); setUser({ ...user, onboardingCompletedAt: user.onboardingCompletedAt ?? new Date().toISOString(), chapterTwoCompletedAt: new Date().toISOString() }); }} />;
   if (screen === "intro") return <Intro onBack={() => router.push("/lab-tour")} onStart={() => { window.localStorage.setItem(`labquest-chapter1-started-${user.id}`, "true"); setScreen("m1"); }} />;
   if (screen === "map") return <ChapterMap completed={completed} onSelect={(number) => setScreen(`m${number}` as Screen)} />;

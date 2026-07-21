@@ -80,6 +80,8 @@ export default function MeetingPage() {
     let cancelled = false;
     getCurrentUser().then(async (currentUser) => {
       if (!currentUser) { router.replace("/login"); return; }
+      if (!currentUser.chapterTwoCompletedAt) { router.replace("/labquest?chapter=2&locked=project"); return; }
+      if (!currentUser.chapterThreeCompletedAt) { router.replace("/labquest?chapter=3"); return; }
       const [loadedProjects, loadedInvites, loadedMembers] = await Promise.all([
         loadTeamProjects(currentUser.id), loadTeamProjectInvites(currentUser.id), loadLabMembers(),
       ]);
