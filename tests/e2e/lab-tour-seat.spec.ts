@@ -16,9 +16,13 @@ test("an authenticated member can click a selectable lab seat", async ({ page })
   await page.waitForURL((url) => url.pathname !== "/login");
 
   await page.goto("/lab-tour");
-  await page.getByRole("button", { name: /내 자리 선택/ }).click();
+  await page
+    .getByRole("button", { name: /내 자리 선택|Chọn chỗ của tôi|Choose my seat/ })
+    .click();
 
-  const selectableSeat = page.locator('button[aria-label$=" 선택"]:not([disabled])').first();
+  const selectableSeat = page
+    .locator('button[aria-label*="선택"]:not([disabled]), button[aria-label*="Chọn"]:not([disabled]), button[aria-label*="Select"]:not([disabled])')
+    .first();
   await expect(selectableSeat).toBeVisible();
   await expect(selectableSeat).toBeEnabled();
   await selectableSeat.click();

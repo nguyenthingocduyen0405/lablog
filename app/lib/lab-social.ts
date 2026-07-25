@@ -1,4 +1,5 @@
 import { createClient } from "./supabase/client";
+import { getActiveLabId } from "./lab-tenancy";
 
 export type AvatarConfig = {
   character: "person";
@@ -144,6 +145,18 @@ function invalidatePostCaches(userId?: string) {
     missionActivityCache.delete(userId);
     calendarPostsCache.delete(userId);
   }
+}
+
+export function clearLabDataCaches() {
+  membersCache = null;
+  dailyPostsCache = null;
+  missionActivityCache.clear();
+  calendarPostsCache.clear();
+  activeMissionsCache.clear();
+  notificationsCache.clear();
+  calendarEventsCache = null;
+  onlineMeetingsCache.clear();
+  reminderCheckedAt = 0;
 }
 
 export type PostReaction = { userId: string; emoji: string };
@@ -405,22 +418,24 @@ export async function loadLabMembers(): Promise<LabMember[]> {
   const cached = validCache(membersCache);
   if (cached) return cached;
   const supabase = createClient();
-  let { data, error } = await supabase
+  const labId = getActiveLabId();
+  const memberships = await supabase
+    .from("lab_members")
+    .select("user_id,seat_index")
+    .eq("lab_id", labId)
+    .order("joined_at");
+  if (memberships.error) throw memberships.error;
+  const userIds = (memberships.data ?? []).map((item) => item.user_id);
+  if (userIds.length === 0) return [];
+  const { data, error } = await supabase
     .from("profiles")
-    .select(
-      "id,name,role,status,initials,avatar_background,avatar_config,lab_seat",
-    )
+    .select("id,name,role,status,initials,avatar_background,avatar_config")
+    .in("id", userIds)
     .order("created_at");
-  if (error?.code === "42703") {
-    const fallback = await supabase
-      .from("profiles")
-      .select("id,name,role,status,initials,avatar_background,avatar_config")
-      .order("created_at");
-    data =
-      fallback.data?.map((profile) => ({ ...profile, lab_seat: null })) ?? null;
-    error = fallback.error;
-  }
   if (error) throw error;
+  const seatByUser = new Map(
+    (memberships.data ?? []).map((item) => [item.user_id, item.seat_index]),
+  );
   const members = (data ?? []).map((profile) => ({
     id: profile.id,
     name: profile.name,
@@ -429,7 +444,10 @@ export async function loadLabMembers(): Promise<LabMember[]> {
     initials: profile.initials,
     avatarBackground: profile.avatar_background,
     avatarConfig: mapAvatarConfig(profile.avatar_config),
-    labSeat: typeof profile.lab_seat === "number" ? profile.lab_seat : null,
+    labSeat:
+      typeof seatByUser.get(profile.id) === "number"
+        ? Number(seatByUser.get(profile.id))
+        : null,
   }));
   membersCache = { value: members, expiresAt: Date.now() + DATA_CACHE_MS };
   return members;
@@ -439,10 +457,10 @@ export async function saveLabSeat(userId: string, labSeat: number) {
   if (!Number.isInteger(labSeat) || labSeat < 0 || labSeat > 7)
     throw new Error("Invalid lab seat");
   const supabase = createClient();
-  const { error } = await supabase
-    .from("profiles")
-    .update({ lab_seat: labSeat })
-    .eq("id", userId);
+  const { error } = await supabase.rpc("set_my_lab_seat", {
+    target_lab_id: getActiveLabId(),
+    target_seat_index: labSeat,
+  });
   if (error) throw error;
   membersCache = null;
 }
@@ -469,6 +487,7 @@ export async function loadCalendarEvents(): Promise<CalendarEvent[]> {
     .select(
       "id,user_id,title,description,category,starts_on,ends_on,created_at",
     )
+    .eq("lab_id", getActiveLabId())
     .order("starts_on", { ascending: true })
     .limit(500);
   if (error) throw error;
@@ -492,6 +511,7 @@ export async function createCalendarEvent(input: {
   const { data, error } = await supabase
     .from("calendar_events")
     .insert({
+      lab_id: getActiveLabId(),
       user_id: input.userId,
       title: input.title,
       description: input.description,
@@ -530,6 +550,7 @@ export async function loadOnlineMeetings(
     .select(
       "id,creator_id,project_id,title,description,room_name,starts_at,ended_at,meeting_notes,notes_updated_at,notes_updated_by,created_at",
     )
+    .eq("lab_id", getActiveLabId())
     .eq("project_id", projectId)
     .is("ended_at", null)
     .order("starts_at", { ascending: false })
@@ -553,6 +574,7 @@ export async function loadProjectMeetingHistory(
     .select(
       "id,creator_id,project_id,title,description,room_name,starts_at,ended_at,meeting_notes,notes_updated_at,notes_updated_by,created_at",
     )
+    .eq("lab_id", getActiveLabId())
     .eq("project_id", projectId)
     .not("ended_at", "is", null)
     .order("ended_at", { ascending: false })
@@ -617,6 +639,7 @@ export async function loadTeamProjects(userId: string): Promise<TeamProject[]> {
     .select(
       "id,owner_id,name,description,deadline,reward_points,status,completed_at,active,created_at",
     )
+    .eq("lab_id", getActiveLabId())
     .in("id", projectIds)
     .order("created_at", { ascending: false });
   if (projects.error) throw projects.error;
@@ -644,6 +667,7 @@ export async function loadTeamProjectInvites(
       .select(
         "id,owner_id,name,description,deadline,reward_points,status,completed_at,active,created_at",
       )
+      .eq("lab_id", getActiveLabId())
       .in("id", projectIds),
     supabase.from("profiles").select("id,name").in("id", hostIds),
   ]);
@@ -681,13 +705,25 @@ export async function loadTeamProjectMembers(
   if (error) throw error;
   const userIds = [...new Set((rows ?? []).map((row) => row.user_id))];
   if (userIds.length === 0) return [];
-  const profiles = await supabase
-    .from("profiles")
-    .select(
-      "id,name,role,status,initials,avatar_background,avatar_config,lab_seat",
-    )
-    .in("id", userIds);
+  const [profiles, memberships] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id,name,role,status,initials,avatar_background,avatar_config")
+      .in("id", userIds),
+    supabase
+      .from("lab_members")
+      .select("user_id,seat_index")
+      .eq("lab_id", getActiveLabId())
+      .in("user_id", userIds),
+  ]);
   if (profiles.error) throw profiles.error;
+  if (memberships.error) throw memberships.error;
+  const seatByUser = new Map(
+    (memberships.data ?? []).map((membership) => [
+      membership.user_id,
+      membership.seat_index,
+    ]),
+  );
   return (rows ?? []).flatMap((row) => {
     const profile = (profiles.data ?? []).find(
       (item) => item.id === row.user_id,
@@ -708,7 +744,9 @@ export async function loadTeamProjectMembers(
           avatarBackground: profile.avatar_background,
           avatarConfig: mapAvatarConfig(profile.avatar_config),
           labSeat:
-            typeof profile.lab_seat === "number" ? profile.lab_seat : null,
+            typeof seatByUser.get(profile.id) === "number"
+              ? Number(seatByUser.get(profile.id))
+              : null,
         },
       },
     ];
@@ -729,6 +767,7 @@ export async function createTeamProject(
     project_deadline: deadline,
     project_reward_points: rewardPoints,
     invited_user_ids: invitedUserIds,
+    target_lab_id: getActiveLabId(),
   });
   if (error) throw error;
   notificationsCache.clear();
@@ -827,6 +866,7 @@ export async function loadTeamProjectRewardTotal(
   const supabase = createClient();
   const { data, error } = await supabase.rpc("get_team_project_reward_total", {
     target_user_id: userId,
+    target_lab_id: getActiveLabId(),
   });
   if (error && ["PGRST202", "42883"].includes(error.code)) return 0;
   if (error) throw error;
@@ -868,6 +908,7 @@ export async function createDailyPost(
   const { data, error: postError } = await supabase
     .from("posts")
     .insert({
+      lab_id: getActiveLabId(),
       user_id: memberId,
       post_kind: kind,
       moment_category: kind === "moment" ? momentCategory : null,
@@ -916,6 +957,7 @@ export async function loadDailyPosts(): Promise<DailyPost[]> {
     .select(
       "id,user_id,post_kind,moment_category,mission_id,mission_title,score_awarded,caption,status,image_path,created_at",
     )
+    .eq("lab_id", getActiveLabId())
     .order("created_at", { ascending: false });
   if (error) throw error;
   const posts = data ?? [];
@@ -989,6 +1031,7 @@ export async function loadMissionActivity(
   const { data, error } = await supabase
     .from("posts")
     .select("mission_id,created_at")
+    .eq("lab_id", getActiveLabId())
     .eq("user_id", userId)
     .eq("post_kind", "work")
     .order("created_at", { ascending: false });
@@ -1013,6 +1056,7 @@ export async function loadCalendarPosts(userId: string): Promise<DailyPost[]> {
     .select(
       "id,user_id,post_kind,moment_category,mission_id,mission_title,score_awarded,caption,status,image_path,created_at",
     )
+    .eq("lab_id", getActiveLabId())
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -1097,6 +1141,7 @@ export async function loadActiveMissions(userId: string): Promise<Mission[]> {
     .select(
       "id,user_id,title,duration_days,points_per_update,started_on,ends_on,active,created_at",
     )
+    .eq("lab_id", getActiveLabId())
     .eq("user_id", userId)
     .eq("active", true)
     .gte("ends_on", seoulDateKey(new Date()))
@@ -1133,6 +1178,7 @@ export async function addMission(
   const { data, error } = await supabase.rpc("set_my_mission", {
     mission_title: title,
     mission_duration: durationDays,
+    target_lab_id: getActiveLabId(),
   });
   if (error) throw error;
   const mission = mapMission(data);
@@ -1241,6 +1287,7 @@ export async function loadNotifications(
     .select(
       "id,type,emoji,comment_preview,post_id,actor_id,mission_id,mission_title,project_id,project_title,created_at,read_at",
     )
+    .eq("lab_id", getActiveLabId())
     .eq("recipient_id", userId)
     .neq("type", "mission_invite")
     .order("created_at", { ascending: false })

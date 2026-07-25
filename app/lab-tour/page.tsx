@@ -119,6 +119,10 @@ export default function LabTourPage() {
           router.replace("/login");
           return;
         }
+        if (currentUser.onboardingCompletedAt) {
+          router.replace(`/members/${currentUser.id}`);
+          return;
+        }
         const loadedMembers = await loadLabMembers();
         if (!cancelled) {
           setUser(currentUser);

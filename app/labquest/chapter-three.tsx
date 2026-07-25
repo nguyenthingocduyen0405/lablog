@@ -7,7 +7,9 @@ import { useI18n } from "../lib/i18n";
 type ChapterThreeProps = {
   userId: string;
   chapterCompleted: boolean;
+  initialCompleted?: number[];
   onBackToLabLog: () => void;
+  onMissionComplete?: (number: number) => Promise<void>;
   onUnlocked: () => Promise<void>;
   onOpenProject: () => void;
 };
@@ -63,7 +65,9 @@ const MISSIONS = [
 export default function ChapterThree({
   userId,
   chapterCompleted,
+  initialCompleted = [],
   onBackToLabLog,
+  onMissionComplete,
   onUnlocked,
   onOpenProject,
 }: ChapterThreeProps) {
@@ -78,7 +82,9 @@ export default function ChapterThree({
     const timer = window.setTimeout(() => {
       const raw = window.localStorage.getItem(`labquest-chapter3-${userId}`);
       const progress = raw ? (JSON.parse(raw) as number[]) : [];
-      const valid = progress.filter((value) => [1, 2, 3, 4].includes(value));
+      const valid = Array.from(new Set([...progress, ...initialCompleted]))
+        .filter((value) => [1, 2, 3, 4].includes(value))
+        .sort();
       setCompleted(valid);
       const started =
         window.localStorage.getItem(`labquest-chapter3-started-${userId}`) ===
@@ -92,7 +98,7 @@ export default function ChapterThree({
       );
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [chapterCompleted, userId]);
+  }, [chapterCompleted, initialCompleted, userId]);
 
   function solveMission() {
     setView("reward");
@@ -106,6 +112,19 @@ export default function ChapterThree({
       `labquest-chapter3-${userId}`,
       JSON.stringify(next),
     );
+    try {
+      await onMissionComplete?.(selectedMission);
+    } catch {
+      setError(
+        l(
+          "Mission 진행 상황을 저장하지 못했습니다. 다시 시도해 주세요.",
+          "Không thể lưu tiến độ Mission. Hãy thử lại.",
+          "Could not save Mission progress. Try again.",
+        ),
+      );
+      setView("map");
+      return;
+    }
     if (selectedMission !== 4) {
       setView("map");
       return;

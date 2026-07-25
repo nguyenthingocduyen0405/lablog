@@ -3,7 +3,7 @@
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getCurrentUser } from "../lib/auth";
+import type { AuthUser } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
 
 const navItems = [
@@ -61,30 +61,22 @@ function NavPendingIndicator() {
   );
 }
 
-export default function FloatingNav() {
+export default function FloatingNav({
+  user,
+}: {
+  user: Pick<AuthUser, "chapterTwoCompletedAt" | "chapterThreeCompletedAt">;
+}) {
   const pathname = usePathname();
   const { t, l } = useI18n();
   const [hash, setHash] = useState("");
-  const [chapterTwoCompleted, setChapterTwoCompleted] = useState(false);
-  const [chapterThreeCompleted, setChapterThreeCompleted] = useState(false);
+  const chapterTwoCompleted = Boolean(user.chapterTwoCompletedAt);
+  const chapterThreeCompleted = Boolean(user.chapterThreeCompletedAt);
 
   useEffect(() => {
     const syncHash = () => setHash(window.location.hash);
     syncHash();
     window.addEventListener("hashchange", syncHash);
     return () => window.removeEventListener("hashchange", syncHash);
-  }, [pathname]);
-
-  useEffect(() => {
-    getCurrentUser()
-      .then((user) => {
-        setChapterTwoCompleted(Boolean(user?.chapterTwoCompletedAt));
-        setChapterThreeCompleted(Boolean(user?.chapterThreeCompletedAt));
-      })
-      .catch(() => {
-        setChapterTwoCompleted(false);
-        setChapterThreeCompleted(false);
-      });
   }, [pathname]);
 
   function isActive(id: (typeof navItems)[number]["id"]) {

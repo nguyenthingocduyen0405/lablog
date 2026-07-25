@@ -5,6 +5,7 @@ import type { LabMember } from "../lib/lab-social";
 import { LAB_SEATS, placeMembersBySeat } from "../lib/lab-map";
 import CharacterAvatar from "./character-avatar";
 import { useI18n } from "../lib/i18n";
+import { useLab } from "../lib/lab-tenancy";
 
 type LabRoomMapProps = {
   members: LabMember[];
@@ -26,13 +27,14 @@ export default function LabRoomMap({
   children,
 }: LabRoomMapProps) {
   const { l } = useI18n();
+  const { activeLab } = useLab();
   const roomMembers = placeMembersBySeat(members);
 
   return (
     <div className="absolute inset-0">
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/lab-tour-room-v5.png')" }}
+        style={{ backgroundImage: 'url("' + activeLab.mapImageUrl + '")' }}
       />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-white/5" />
       {LAB_SEATS.map((seat, index) => {

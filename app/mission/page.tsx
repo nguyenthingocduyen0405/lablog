@@ -21,9 +21,21 @@ export default function MissionPage() {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [posts, setPosts] = useState<MissionActivity[]>([]);
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    const loadingTimeoutId = window.setTimeout(() => {
+      if (cancelled) return;
+      setMessage(
+        l(
+          "요청 시간이 초과되었습니다. Supabase 연결을 확인해 주세요.",
+          "Yêu cầu đã hết thời gian. Vui lòng kiểm tra kết nối Supabase.",
+          "The request timed out. Please check the Supabase connection.",
+        ),
+      );
+      setIsLoading(false);
+    }, 10_000);
     getCurrentUser()
       .then(async (currentUser) => {
         if (!currentUser) {
@@ -34,33 +46,89 @@ export default function MissionPage() {
           router.replace("/labquest?chapter=2&locked=mission");
           return;
         }
-        const [activeMissions, loadedPosts] = await Promise.all([
-          loadActiveMissions(currentUser.id),
-          loadMissionActivity(currentUser.id),
-        ]);
-        if (cancelled) return;
         setUser(currentUser);
-        setMissions(activeMissions);
-        setPosts(loadedPosts);
+        try {
+          const [activeMissions, loadedPosts] = await Promise.all([
+            loadActiveMissions(currentUser.id),
+            loadMissionActivity(currentUser.id),
+          ]);
+          if (cancelled) return;
+          setMissions(activeMissions);
+          setPosts(loadedPosts);
+        } catch (caughtError) {
+          if (cancelled) return;
+          setMessage(
+            caughtError instanceof Error
+              ? caughtError.message
+              : l(
+                  "Supabase 연결을 확인해 주세요.",
+                  "Vui lòng kiểm tra kết nối Supabase.",
+                  "Please check the Supabase connection.",
+                ),
+          );
+        } finally {
+          window.clearTimeout(loadingTimeoutId);
+          if (!cancelled) setIsLoading(false);
+        }
       })
-      .catch(() =>
+      .catch(() => {
+        if (cancelled) return;
+        window.clearTimeout(loadingTimeoutId);
         setMessage(
           l(
             "Supabase 연결을 확인해 주세요.",
             "Vui lòng kiểm tra kết nối Supabase.",
             "Please check the Supabase connection.",
           ),
-        ),
-      );
+        );
+        setIsLoading(false);
+      });
     return () => {
       cancelled = true;
+      window.clearTimeout(loadingTimeoutId);
     };
   }, [l, router]);
 
   if (!user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f5f3ee]">
-        <p className="text-sm font-black text-stone-400">LABLOG</p>
+      <main className="grid min-h-screen place-items-center bg-[#f5f3ee] px-5">
+        <section className="w-full max-w-md rounded-[2rem] bg-white p-8 text-center shadow-sm">
+          <p className="text-xs font-black tracking-[.2em] text-stone-400">
+            LABLOG
+          </p>
+          {isLoading ? (
+            <p className="mt-3 text-sm font-black text-stone-500">
+              {l("미션 로딩 중...", "Đang tải nhiệm vụ...", "Loading missions...")}
+            </p>
+          ) : (
+            <>
+              <h1 className="mt-3 text-2xl font-black text-stone-950">
+                {l(
+                  "미션을 불러오지 못했습니다",
+                  "Không thể tải nhiệm vụ",
+                  "Could not load missions",
+                )}
+              </h1>
+              <p role="alert" className="mt-3 text-sm font-medium text-red-600">
+                {message}
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <Link
+                  href="/"
+                  className="rounded-2xl bg-[#ffd84d] px-4 py-3 text-sm font-black text-stone-950"
+                >
+                  {l("홈으로", "Trang chủ", "Home")}
+                </Link>
+                <Link
+                  href="/labs"
+                  className="rounded-2xl bg-stone-950 px-4 py-3 text-sm font-black text-white"
+                >
+                  {l("랩 관리", "Quản lý lab", "Manage labs")}
+                </Link>
+              </div>
+            </>
+          )}
+        </section>
       </main>
     );
   }

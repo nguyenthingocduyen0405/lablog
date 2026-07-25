@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { getCurrentUser, loginAccount } from "../lib/auth";
 import LanguageSwitcher from "../components/language-switcher";
 import { useI18n } from "../lib/i18n";
+import { getAccountLandingPath } from "../lib/lab-tenancy";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,7 +17,9 @@ export default function LoginPage() {
   useEffect(() => {
     getCurrentUser()
       .then((user) => {
-        if (user) router.replace("/");
+        if (user) {
+          void getAccountLandingPath().then((path) => router.replace(path));
+        }
       })
       .catch(() => undefined);
   }, [router]);
@@ -31,7 +34,7 @@ export default function LoginPage() {
         String(formData.get("email")),
         String(formData.get("password")),
       );
-      router.replace("/");
+      router.replace(await getAccountLandingPath());
     } catch {
       setError(t("invalidCredentials"));
     } finally {

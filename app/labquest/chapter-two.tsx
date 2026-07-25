@@ -493,13 +493,17 @@ export const CHAPTER_TWO_MISSIONS: ChapterTwoMission[] = [
 type ChapterTwoProps = {
   userId: string;
   chapterCompleted: boolean;
+  initialCompleted?: number[];
   onBackToLabLog: () => void;
+  onMissionComplete?: (number: number) => Promise<void>;
   onUnlocked: () => Promise<void>;
 };
 export default function ChapterTwo({
   userId,
   chapterCompleted,
+  initialCompleted = [],
   onBackToLabLog,
+  onMissionComplete,
   onUnlocked,
 }: ChapterTwoProps) {
   const { l } = useI18n();
@@ -515,13 +519,16 @@ export default function ChapterTwo({
     const timer = window.setTimeout(() => {
       const raw = window.localStorage.getItem(`labquest-chapter2-${userId}`);
       const progress = raw ? (JSON.parse(raw) as number[]) : [];
-      setCompleted(progress.filter((value) => [1, 2, 3, 4].includes(value)));
+      const valid = Array.from(new Set([...progress, ...initialCompleted]))
+        .filter((value) => [1, 2, 3, 4].includes(value))
+        .sort();
+      setCompleted(valid);
       setView(
-        chapterCompleted ? "complete" : progress.length ? "map" : "intro",
+        chapterCompleted ? "complete" : valid.length ? "map" : "intro",
       );
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [chapterCompleted, userId]);
+  }, [chapterCompleted, initialCompleted, userId]);
 
   async function finishMission(number: number) {
     const next = Array.from(new Set([...completed, number])).sort();
@@ -530,6 +537,19 @@ export default function ChapterTwo({
       `labquest-chapter2-${userId}`,
       JSON.stringify(next),
     );
+    try {
+      await onMissionComplete?.(number);
+    } catch {
+      setError(
+        l(
+          "Mission 진행 상황을 저장하지 못했습니다. 다시 시도해 주세요.",
+          "Không thể lưu tiến độ Mission. Hãy thử lại.",
+          "Could not save Mission progress. Try again.",
+        ),
+      );
+      setView("map");
+      return;
+    }
     if (number !== 4) {
       setView("map");
       return;

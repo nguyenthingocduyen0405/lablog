@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { getCurrentUser, registerAccount } from "../lib/auth";
 import LanguageSwitcher from "../components/language-switcher";
 import { useI18n } from "../lib/i18n";
+import { getAccountLandingPath } from "../lib/lab-tenancy";
 
 function getSignupErrorMessage(
   error: unknown,
@@ -57,7 +58,9 @@ export default function SignupPage() {
   useEffect(() => {
     getCurrentUser()
       .then((user) => {
-        if (user) router.replace("/");
+        if (user) {
+          void getAccountLandingPath().then((path) => router.replace(path));
+        }
       })
       .catch(() => undefined);
   }, [router]);
@@ -78,8 +81,11 @@ export default function SignupPage() {
         email: String(formData.get("email")),
         password,
         role: String(formData.get("role")),
+        joinCode: String(formData.get("joinCode")),
       });
-      router.replace(result.hasSession ? "/" : "/login");
+      router.replace(
+        result.hasSession ? await getAccountLandingPath() : "/login",
+      );
     } catch (caughtError) {
       setError(getSignupErrorMessage(caughtError, l));
     } finally {
@@ -153,6 +159,17 @@ export default function SignupPage() {
                   required
                   placeholder="Operating Systems"
                   className={fieldClass}
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-black">
+                  {l("랩 초대 코드 (선택)", "Mã mời Lab (không bắt buộc)", "Lab invite code (optional)")}
+                </span>
+                <input
+                  name="joinCode"
+                  autoComplete="off"
+                  placeholder="ABCD1234"
+                  className={fieldClass + " uppercase tracking-[.18em]"}
                 />
               </label>
               <div className="grid gap-4 sm:grid-cols-2">

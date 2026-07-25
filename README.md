@@ -1,5 +1,7 @@
 # LABLOG
 
+Hướng dẫn triển khai nhiều phòng lab: [docs/MULTI_LAB_SETUP.md](docs/MULTI_LAB_SETUP.md).
+
 An open-source, gamified social journal for research labs. LABLOG helps members share daily progress, complete personal missions, build streaks, coordinate schedules, and stay connected through a playful team experience.
 
 > **Tiếng Việt:** LABLOG là nhật ký nhóm nghiên cứu mã nguồn mở. Thành viên có thể chia sẻ tiến độ, hoàn thành nhiệm vụ, duy trì streak và theo dõi lịch chung.
