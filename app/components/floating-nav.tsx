@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { AuthUser } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
+import { useLab } from "../lib/lab-tenancy";
+import { labQuestHref } from "../lib/lab-routing";
 
 const navItems = [
   {
@@ -68,6 +70,7 @@ export default function FloatingNav({
 }) {
   const pathname = usePathname();
   const { t, l } = useI18n();
+  const { activeLab } = useLab();
   const [hash, setHash] = useState("");
   const chapterTwoCompleted = Boolean(user.chapterTwoCompletedAt);
   const chapterThreeCompleted = Boolean(user.chapterThreeCompletedAt);
@@ -113,11 +116,17 @@ export default function FloatingNav({
           projectNeedsChapterThree;
         const active = !locked && isActive(item.id);
         const href = projectNeedsChapterTwo
-          ? "/labquest?chapter=2&locked=project"
+          ? labQuestHref(activeLab.slug, {
+              chapter: 2,
+              locked: "project",
+            })
           : projectNeedsChapterThree
-            ? "/labquest?chapter=3"
+            ? labQuestHref(activeLab.slug, { chapter: 3 })
             : chapterTwoLocked
-              ? `/labquest?chapter=2&locked=${item.id}`
+              ? labQuestHref(activeLab.slug, {
+                  chapter: 2,
+                  locked: item.id,
+                })
               : item.href;
         const lockedChapter = projectNeedsChapterThree ? "CH.3" : "CH.2";
         const title = projectNeedsChapterTwo

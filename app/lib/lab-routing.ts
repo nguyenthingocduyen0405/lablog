@@ -1,5 +1,22 @@
 import type { Lab } from "./lab-tenancy";
 
+export type LabQuestHrefOptions = {
+  chapter?: number;
+  locked?: string;
+};
+
+export function labQuestHref(
+  labSlug: string,
+  options: LabQuestHrefOptions = {},
+) {
+  const params = new URLSearchParams({ lab: labSlug });
+  if (Number.isInteger(options.chapter) && Number(options.chapter) > 0) {
+    params.set("chapter", String(options.chapter));
+  }
+  if (options.locked?.trim()) params.set("locked", options.locked.trim());
+  return "/labquest?" + params.toString();
+}
+
 export type LabDeepLinkDecision =
   | { action: "wait" }
   | { action: "open"; lab: Lab }

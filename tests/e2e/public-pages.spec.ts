@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  labQuestHref,
   resolveLabDeepLink,
   shouldNavigateForLabSwitch,
 } from "../../app/lib/lab-routing";
@@ -38,6 +39,10 @@ import {
 const osLab = {
   id: "11111111-1111-4111-8111-111111111111",
   slug: "os-lab",
+} as Lab;
+const cvLab = {
+  id: "22222222-2222-4222-8222-222222222222",
+  slug: "cv-labs",
 } as Lab;
 
 test("OS Lab surfaces do not render the lab switcher", () => {
@@ -124,6 +129,28 @@ test("an active lab deep link does not wait for the lab request", () => {
   });
 });
 
+test("a Lab Quest URL identifies the exact lab and preserves locked chapter context", () => {
+  expect(labQuestHref("cv-labs")).toBe("/labquest?lab=cv-labs");
+  expect(
+    labQuestHref("cv-labs", { chapter: 2, locked: "mission" }),
+  ).toBe("/labquest?lab=cv-labs&chapter=2&locked=mission");
+  expect(resolveLabDeepLink("cv-labs", osLab, [osLab, cvLab], false)).toEqual({
+    action: "open",
+    lab: cvLab,
+  });
+});
+
+test("the player activates the requested lab before rendering its quest", () => {
+  const labQuest = readFileSync(
+    resolve(process.cwd(), "app/labquest/page.tsx"),
+    "utf8",
+  );
+
+  expect(labQuest).toContain("resolveLabDeepLink(");
+  expect(labQuest).toContain('decision.lab.id !== activeLab.id');
+  expect(labQuest).toContain('switchLab(decision.lab, "/labquest?" + query)');
+});
+
 test("activating a lab does not reload the route that is already open", () => {
   expect(
     shouldNavigateForLabSwitch(
@@ -146,13 +173,33 @@ test("lab names without ASCII characters receive a valid fallback slug", () => {
   );
 });
 
-test("starter quest contains localized onboarding content", () => {
+test("new labs receive three localized chapters with three missions each", () => {
   const starter = buildStarterQuest();
-  expect(starter.chapter.title_i18n.ko).toBeTruthy();
-  expect(starter.chapter.title_i18n.vi).toBeTruthy();
-  expect(starter.chapter.title_i18n.en).toBeTruthy();
-  expect(starter.missions).toHaveLength(3);
-  expect(starter.missions.some((mission) => mission.mission_type === "quiz")).toBe(true);
+  expect(starter.chapters).toHaveLength(3);
+  expect(
+    starter.chapters.every((chapter) =>
+      Object.values(chapter.title_i18n).every(Boolean),
+    ),
+  ).toBe(true);
+  expect(starter.chapters.map((chapter) => chapter.missions.length)).toEqual([
+    3, 3, 3,
+  ]);
+  expect(
+    starter.chapters.map(
+      (chapter) => chapter.unlock_rule.previousChapterRequired,
+    ),
+  ).toEqual([false, true, true]);
+  expect(starter.chapters[1].missions[0]).toMatchObject({
+    mission_type: "code-output",
+    content: {
+      codeSnippet: 'console.log("Hello world!");',
+      rewardPoints: 10,
+    },
+    validation: { expectedAnswer: "Hello world!" },
+  });
+  expect(starter.chapters.flatMap((chapter) => chapter.missions)).toHaveLength(
+    9,
+  );
 });
 
 test("quest editor stores one input without requiring translations", () => {

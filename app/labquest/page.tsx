@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   completeChapterThree,
   completeChapterTwo,
@@ -14,6 +14,7 @@ import ChapterTwo from "./chapter-two";
 import ChapterThree from "./chapter-three";
 import { useI18n } from "../lib/i18n";
 import { useLab } from "../lib/lab-tenancy";
+import { labQuestHref, resolveLabDeepLink } from "../lib/lab-routing";
 import GenericLabQuest from "./generic-labquest";
 import {
   completeOsLabMission,
@@ -117,8 +118,74 @@ function storedChapterProgress(userId: string, chapter: number) {
 }
 
 export default function LabQuestPage() {
-  const { activeLab, isLoading } = useLab();
-  if (isLoading) return <Loading />;
+  return (
+    <Suspense fallback={<Loading />}>
+      <RoutedLabQuest />
+    </Suspense>
+  );
+}
+
+function RoutedLabQuest() {
+  const { activeLab, labs, isLoading, switchLab } = useLab();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  const requestedSlug = searchParams.get("lab")?.trim() ?? "";
+  const requestedChapter = Number(searchParams.get("chapter"));
+  const lockedFeature = searchParams.get("locked")?.trim() || undefined;
+  const decision = useMemo(
+    () =>
+      requestedSlug
+        ? resolveLabDeepLink(requestedSlug, activeLab, labs, isLoading)
+        : ({ action: "wait" } as const),
+    [activeLab, isLoading, labs, requestedSlug],
+  );
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!requestedSlug) {
+      router.replace(
+        labQuestHref(activeLab.slug, {
+          chapter:
+            Number.isInteger(requestedChapter) && requestedChapter > 0
+              ? requestedChapter
+              : undefined,
+          locked: lockedFeature,
+        }),
+      );
+      return;
+    }
+    if (decision.action === "manage") {
+      router.replace("/labs");
+      return;
+    }
+    if (
+      decision.action === "open" &&
+      decision.lab.id !== activeLab.id
+    ) {
+      switchLab(decision.lab, "/labquest?" + query);
+    }
+  }, [
+    activeLab.id,
+    activeLab.slug,
+    decision,
+    isLoading,
+    lockedFeature,
+    query,
+    requestedChapter,
+    requestedSlug,
+    router,
+    switchLab,
+  ]);
+
+  if (
+    isLoading ||
+    !requestedSlug ||
+    decision.action !== "open" ||
+    decision.lab.id !== activeLab.id
+  ) {
+    return <Loading />;
+  }
   if (activeLab.slug !== "os-lab") return <GenericLabQuest />;
   return <OsLabQuestChapterOne labId={activeLab.id} />;
 }

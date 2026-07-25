@@ -119,6 +119,11 @@ export function storeActiveLab(lab: Pick<Lab, "id" | "slug">) {
     "=" +
     encodeURIComponent(lab.id) +
     "; Path=/; Max-Age=31536000; SameSite=Lax";
+  document.cookie =
+    ACTIVE_LAB_SLUG_KEY +
+    "=" +
+    encodeURIComponent(lab.slug) +
+    "; Path=/; Max-Age=31536000; SameSite=Lax";
 }
 
 export function clearStoredActiveLab() {
@@ -127,6 +132,8 @@ export function clearStoredActiveLab() {
   window.localStorage.removeItem(ACTIVE_LAB_SLUG_KEY);
   document.cookie =
     ACTIVE_LAB_ID_KEY + "=; Path=/; Max-Age=0; SameSite=Lax";
+  document.cookie =
+    ACTIVE_LAB_SLUG_KEY + "=; Path=/; Max-Age=0; SameSite=Lax";
 }
 
 async function fetchMyLabs(): Promise<{

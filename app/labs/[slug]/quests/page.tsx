@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { useParams, useRouter } from "next/navigation";
 import { useI18n } from "../../../lib/i18n";
 import { useLab } from "../../../lib/lab-tenancy";
+import { labQuestHref } from "../../../lib/lab-routing";
 import {
   createStarterQuest,
   deleteQuestChapter,
@@ -347,7 +348,7 @@ export default function QuestEditorPage() {
             <Link href={"/labs/" + lab.slug} className="rounded-full bg-white px-5 py-3 text-sm font-black shadow-sm">
               {l("랩 포털", "Portal lab", "Lab portal")}
             </Link>
-            <button onClick={() => switchLab(lab, "/labquest")} className="rounded-full bg-[#ffd84d] px-5 py-3 text-sm font-black">
+            <button onClick={() => switchLab(lab, labQuestHref(lab.slug))} className="rounded-full bg-[#ffd84d] px-5 py-3 text-sm font-black">
               {l("미리보기", "Xem trước", "Preview")}
             </button>
             <Link href="/labs" className="rounded-full bg-white px-5 py-3 text-sm font-black shadow-sm">

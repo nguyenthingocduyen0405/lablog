@@ -11,6 +11,8 @@ import LanguageSwitcher from "../../components/language-switcher";
 import NotificationsBell from "../../components/notifications-bell";
 import { getCurrentUser, logoutAccount, type AuthUser } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
+import { labQuestHref } from "../../lib/lab-routing";
+import { useLab } from "../../lib/lab-tenancy";
 import {
   calculateCurrentStreak,
   getMemberAvailability,
@@ -26,6 +28,7 @@ import {
 export default function MemberProfilePage() {
   const router = useRouter();
   const { l } = useI18n();
+  const { activeLab } = useLab();
   const { id } = useParams<{ id: string }>();
   const [localPosts, setLocalPosts] = useState<DailyPost[]>([]);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -43,7 +46,7 @@ export default function MemberProfilePage() {
           return;
         }
         if (!user.onboardingCompletedAt) {
-          router.replace("/labquest");
+          router.replace(labQuestHref(activeLab.slug));
           return;
         }
         const [
@@ -68,7 +71,7 @@ export default function MemberProfilePage() {
     return () => {
       cancelled = true;
     };
-  }, [id, router]);
+  }, [activeLab.slug, id, router]);
 
   const memberPosts = useMemo(
     () =>
@@ -132,7 +135,7 @@ export default function MemberProfilePage() {
             href={
               currentUser.chapterTwoCompletedAt
                 ? "/update#feed"
-                : "/labquest?chapter=2&locked=feed"
+                : labQuestHref(activeLab.slug, { chapter: 2, locked: "feed" })
             }
             className="flex items-center gap-2 text-sm font-black transition hover:-translate-x-1"
           >
@@ -263,7 +266,10 @@ export default function MemberProfilePage() {
                       )}
                     </p>
                     <Link
-                      href="/labquest?chapter=2&locked=score"
+                      href={labQuestHref(activeLab.slug, {
+                        chapter: 2,
+                        locked: "score",
+                      })}
                       className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-stone-950 px-5 py-3 text-sm font-black text-white shadow-[0_5px_0_#c7a600]"
                     >
                       {l("시작하기", "Bắt đầu", "Start")}
@@ -282,7 +288,10 @@ export default function MemberProfilePage() {
                   href={
                     currentUser.chapterTwoCompletedAt
                       ? "/update#new-post"
-                      : "/labquest?chapter=2&locked=update"
+                      : labQuestHref(activeLab.slug, {
+                          chapter: 2,
+                          locked: "update",
+                        })
                   }
                   className="flex items-center rounded-2xl bg-[#ffd84d] px-5 py-3 text-sm font-black text-stone-950 transition hover:-translate-y-0.5"
                 >
@@ -364,7 +373,10 @@ export default function MemberProfilePage() {
                   href={
                     currentUser.chapterTwoCompletedAt
                       ? "/update#new-post"
-                      : "/labquest?chapter=2&locked=update"
+                      : labQuestHref(activeLab.slug, {
+                          chapter: 2,
+                          locked: "update",
+                        })
                   }
                   className="mt-6 inline-flex rounded-full bg-stone-950 px-5 py-3 text-sm font-black text-white"
                 >

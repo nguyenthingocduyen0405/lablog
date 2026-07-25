@@ -7,6 +7,8 @@ import AppHeader from "../components/app-header";
 import MissionPanel from "../components/mission-panel";
 import { getCurrentUser, type AuthUser } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
+import { useLab } from "../lib/lab-tenancy";
+import { labQuestHref } from "../lib/lab-routing";
 import {
   loadActiveMissions,
   loadMissionActivity,
@@ -17,6 +19,7 @@ import {
 export default function MissionPage() {
   const router = useRouter();
   const { l } = useI18n();
+  const { activeLab } = useLab();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [posts, setPosts] = useState<MissionActivity[]>([]);
@@ -43,7 +46,12 @@ export default function MissionPage() {
           return;
         }
         if (!currentUser.chapterTwoCompletedAt) {
-          router.replace("/labquest?chapter=2&locked=mission");
+          router.replace(
+            labQuestHref(activeLab.slug, {
+              chapter: 2,
+              locked: "mission",
+            }),
+          );
           return;
         }
         setUser(currentUser);
@@ -87,7 +95,7 @@ export default function MissionPage() {
       cancelled = true;
       window.clearTimeout(loadingTimeoutId);
     };
-  }, [l, router]);
+  }, [activeLab.slug, l, router]);
 
   if (!user) {
     return (
@@ -195,7 +203,10 @@ export default function MissionPage() {
               </Link>
             ) : (
               <Link
-                href="/labquest?chapter=2&locked=update"
+                href={labQuestHref(activeLab.slug, {
+                  chapter: 2,
+                  locked: "update",
+                })}
                 className="inline-flex items-center gap-3 rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-black text-stone-500 shadow-sm"
               >
                 <span>🔒</span>

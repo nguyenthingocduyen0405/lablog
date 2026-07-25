@@ -77,17 +77,21 @@ export default function LabPortalPage() {
   const chapterThreeCompleted = Boolean(accessUser.chapterThreeCompletedAt);
   const portalLinks = [
     {
-      href: resolvePortalQuestHref(accessUser.id, onboardingCompleted),
+      href: resolvePortalQuestHref(
+        accessUser.id,
+        onboardingCompleted,
+        lab.slug,
+      ),
       icon: onboardingCompleted ? "🏠" : "🎮",
       label: onboardingCompleted
         ? l("메인", "Trang chính", "Main")
         : "LabQuest",
     },
     { href: "/labs/" + lab.slug + "/papers", icon: "📚", label: "Paper Club" },
-    { href: resolvePortalFeatureHref("feed", chapterTwoCompleted, chapterThreeCompleted), icon: "📣", label: l("피드", "Bảng tin", "Feed") },
-    { href: resolvePortalFeatureHref("mission", chapterTwoCompleted, chapterThreeCompleted), icon: "🎯", label: l("미션", "Nhiệm vụ", "Missions") },
+    { href: resolvePortalFeatureHref("feed", chapterTwoCompleted, chapterThreeCompleted, lab.slug), icon: "📣", label: l("피드", "Bảng tin", "Feed") },
+    { href: resolvePortalFeatureHref("mission", chapterTwoCompleted, chapterThreeCompleted, lab.slug), icon: "🎯", label: l("미션", "Nhiệm vụ", "Missions") },
     { href: "/calendar", icon: "📅", label: l("캘린더", "Lịch", "Calendar") },
-    { href: resolvePortalFeatureHref("project", chapterTwoCompleted, chapterThreeCompleted), icon: "🤝", label: l("프로젝트", "Dự án", "Projects") },
+    { href: resolvePortalFeatureHref("project", chapterTwoCompleted, chapterThreeCompleted, lab.slug), icon: "🤝", label: l("프로젝트", "Dự án", "Projects") },
   ];
 
   return (

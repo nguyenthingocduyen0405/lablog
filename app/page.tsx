@@ -7,6 +7,8 @@ import { getCurrentUser, logoutAccount, type AuthUser } from "./lib/auth";
 import CharacterAvatar from "./components/character-avatar";
 import LanguageSwitcher from "./components/language-switcher";
 import { useI18n } from "./lib/i18n";
+import { labQuestHref } from "./lib/lab-routing";
+import { useLab } from "./lib/lab-tenancy";
 
 function OsLabLogo() {
   return (
@@ -30,10 +32,12 @@ function OsLabLogo() {
 export default function ReadyPage() {
   const router = useRouter();
   const { t } = useI18n();
+  const { activeLab, isLoading: isLabLoading } = useLab();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
+    if (isLabLoading) return;
     let cancelled = false;
     getCurrentUser().then((currentUser) => {
       if (!currentUser) {
@@ -44,17 +48,21 @@ export default function ReadyPage() {
         router.replace(`/members/${currentUser.id}`);
         return;
       }
+      if (activeLab.slug !== "os-lab") {
+        router.replace(labQuestHref(activeLab.slug));
+        return;
+      }
       const chapterOneStarted = window.localStorage.getItem(`labquest-chapter1-started-${currentUser.id}`) === "true";
       const savedProgress = window.localStorage.getItem(`labquest-chapter1-${currentUser.id}`);
       const hasChapterOneProgress = savedProgress ? (JSON.parse(savedProgress) as number[]).length > 0 : false;
       if (chapterOneStarted || hasChapterOneProgress) {
-        router.replace("/labquest");
+        router.replace(labQuestHref(activeLab.slug));
         return;
       }
       if (!cancelled) setUser(currentUser);
     }).catch(() => router.replace("/login"));
     return () => { cancelled = true; };
-  }, [router]);
+  }, [activeLab.slug, isLabLoading, router]);
 
   async function startOnboarding() {
     if (!user || isStarting) return;

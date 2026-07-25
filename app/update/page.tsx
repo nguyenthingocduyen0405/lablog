@@ -8,6 +8,8 @@ import CharacterAvatar from "../components/character-avatar";
 import DailyPostCard from "../components/daily-post-card";
 import { getCurrentUser, type AuthUser } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
+import { useLab } from "../lib/lab-tenancy";
+import { labQuestHref } from "../lib/lab-routing";
 import {
   calculateCurrentStreak,
   createDailyPost,
@@ -31,6 +33,7 @@ import {
 export default function UpdatePage() {
   const router = useRouter();
   const { l } = useI18n();
+  const { activeLab } = useLab();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [posts, setPosts] = useState<DailyPost[]>([]);
@@ -51,7 +54,12 @@ export default function UpdatePage() {
           return;
         }
         if (!currentUser.chapterTwoCompletedAt) {
-          router.replace("/labquest?chapter=2&locked=update");
+          router.replace(
+            labQuestHref(activeLab.slug, {
+              chapter: 2,
+              locked: "update",
+            }),
+          );
           return;
         }
         const [
@@ -84,7 +92,7 @@ export default function UpdatePage() {
     return () => {
       cancelled = true;
     };
-  }, [l, router]);
+  }, [activeLab.slug, l, router]);
 
   const currentStreak = useMemo(
     () => (user ? calculateCurrentStreak(posts, user.id) : 0),

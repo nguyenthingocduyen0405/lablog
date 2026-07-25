@@ -13,6 +13,8 @@ import {
   type LabMember,
 } from "../lib/lab-social";
 import { useI18n } from "../lib/i18n";
+import { labQuestHref } from "../lib/lab-routing";
+import { useLab } from "../lib/lab-tenancy";
 
 type TourStage = "overview" | "seat" | "introductions" | "game" | "complete";
 
@@ -98,6 +100,7 @@ const labObjects = [
 ] as const;
 
 export default function LabTourPage() {
+  const { activeLab } = useLab();
   const router = useRouter();
   const { locale, l } = useI18n();
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -267,7 +270,7 @@ export default function LabTourPage() {
     }
     setIsFinishing(true);
     try {
-      router.push("/labquest");
+      router.push(labQuestHref(activeLab.slug));
     } finally {
       setIsFinishing(false);
     }

@@ -7,18 +7,19 @@ import {
 } from "../../app/lib/feature-routing";
 
 test("unlocked ML Lab opens the member home instead of the game", () => {
-  expect(resolvePortalQuestHref("ml-member-id", true)).toBe(
+  expect(resolvePortalQuestHref("ml-member-id", true, "ml-lab")).toBe(
     "/members/ml-member-id",
   );
-  expect(resolvePortalQuestHref("ml-member-id", false)).toBe("/labquest");
+  expect(resolvePortalQuestHref("ml-member-id", false, "ml-lab")).toBe(
+    "/labquest?lab=ml-lab",
+  );
 
   const portal = readFileSync(
     resolve(process.cwd(), "app/labs/[slug]/page.tsx"),
     "utf8",
   );
-  expect(portal).toContain(
-    "resolvePortalQuestHref(accessUser.id, onboardingCompleted)",
-  );
+  expect(portal).toContain("resolvePortalQuestHref(");
+  expect(portal).toContain("lab.slug,");
 });
 
 test("ML Lab owners can open Feed before completing Chapter 2", () => {
@@ -28,6 +29,7 @@ test("ML Lab owners can open Feed before completing Chapter 2", () => {
       userId: "ml-owner-id",
       memberPathId: null,
       role: "owner",
+      labSlug: "ml-lab",
       chapterTwoCompletedAt: null,
       chapterThreeCompletedAt: null,
     }),
@@ -41,8 +43,9 @@ test("locked ML Lab members are still sent to the Chapter 2 game", () => {
       userId: "ml-member-id",
       memberPathId: null,
       role: "member",
+      labSlug: "ml-lab",
       chapterTwoCompletedAt: null,
       chapterThreeCompletedAt: null,
     }),
-  ).toBe("/labquest?chapter=2&locked=update");
+  ).toBe("/labquest?lab=ml-lab&chapter=2&locked=update");
 });

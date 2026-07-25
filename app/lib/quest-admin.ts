@@ -389,9 +389,24 @@ export function parseQuestBundle(value: string): QuestBundle {
   return parsed as QuestBundle;
 }
 
+function starterCodeOutputMission(
+  title: LocalizedText,
+  instructions: LocalizedText,
+  codeSnippet: string,
+  expectedAnswer: string,
+) {
+  return {
+    mission_type: "code-output" as const,
+    title_i18n: title,
+    instructions_i18n: instructions,
+    content: { codeSnippet, rewardPoints: 10 },
+    validation: { expectedAnswer },
+  };
+}
+
 export function buildStarterQuest() {
   return {
-    chapter: {
+    chapters: [{
       title_i18n: {
         ko: "랩 온보딩",
         vi: "Làm quen với lab",
@@ -402,8 +417,8 @@ export function buildStarterQuest() {
         vi: "Chapter đầu tiên giúp thành viên mới hiểu con người, quy tắc và mục tiêu của lab.",
         en: "A first chapter for learning the lab's people, rules, and goals.",
       },
-    },
-    missions: [
+      unlock_rule: { previousChapterRequired: false },
+      missions: [
       {
         mission_type: "custom" as const,
         title_i18n: {
@@ -449,7 +464,122 @@ export function buildStarterQuest() {
           en: "Write a short research goal you want to achieve this week.",
         },
       },
-    ],
+      ],
+    },
+    {
+      title_i18n: {
+        ko: "코드 기초",
+        vi: "Code cơ bản",
+        en: "Code basics",
+      },
+      description_i18n: {
+        ko: "간단한 JavaScript 코드의 출력 결과를 예측하세요.",
+        vi: "Dự đoán kết quả của những đoạn JavaScript đơn giản.",
+        en: "Predict the output of simple JavaScript snippets.",
+      },
+      unlock_rule: { previousChapterRequired: true },
+      missions: [
+        starterCodeOutputMission(
+          {
+            ko: "Hello world 출력",
+            vi: "Kết quả Hello world",
+            en: "Hello world output",
+          },
+          {
+            ko: "코드를 실행했을 때 출력되는 내용을 정확히 입력하세요.",
+            vi: "Nhập chính xác kết quả được in ra khi chạy đoạn code.",
+            en: "Enter the exact output produced by this code.",
+          },
+          'console.log("Hello world!");',
+          "Hello world!",
+        ),
+        starterCodeOutputMission(
+          {
+            ko: "간단한 덧셈",
+            vi: "Phép cộng cơ bản",
+            en: "Basic addition",
+          },
+          {
+            ko: "덧셈 코드의 출력 결과를 입력하세요.",
+            vi: "Nhập kết quả của phép cộng trong đoạn code.",
+            en: "Enter the output of the addition expression.",
+          },
+          "console.log(2 + 3);",
+          "5",
+        ),
+        starterCodeOutputMission(
+          {
+            ko: "변수 출력",
+            vi: "In giá trị biến",
+            en: "Print a variable",
+          },
+          {
+            ko: "변수에 저장된 문자열의 출력 결과를 입력하세요.",
+            vi: "Nhập chuỗi được lưu trong biến và in ra màn hình.",
+            en: "Enter the string stored in the variable and printed.",
+          },
+          'const lab = "LABLOG";\nconsole.log(lab);',
+          "LABLOG",
+        ),
+      ],
+    },
+    {
+      title_i18n: {
+        ko: "코드 조합하기",
+        vi: "Kết hợp các khái niệm",
+        en: "Combine the basics",
+      },
+      description_i18n: {
+        ko: "문자열, 배열, 함수를 사용해 기본 개념을 조합하세요.",
+        vi: "Kết hợp chuỗi, mảng và hàm để hoàn tất Quest.",
+        en: "Combine strings, arrays, and functions to finish the Quest.",
+      },
+      unlock_rule: { previousChapterRequired: true },
+      missions: [
+        starterCodeOutputMission(
+          {
+            ko: "대문자 변환",
+            vi: "Chuyển thành chữ hoa",
+            en: "Uppercase text",
+          },
+          {
+            ko: "문자열을 대문자로 바꾼 결과를 입력하세요.",
+            vi: "Nhập kết quả sau khi chuỗi được chuyển thành chữ hoa.",
+            en: "Enter the result after the string becomes uppercase.",
+          },
+          'console.log("lab".toUpperCase());',
+          "LAB",
+        ),
+        starterCodeOutputMission(
+          {
+            ko: "배열 항목 찾기",
+            vi: "Lấy phần tử trong mảng",
+            en: "Read an array item",
+          },
+          {
+            ko: "배열에서 선택된 항목의 출력 결과를 입력하세요.",
+            vi: "Nhập phần tử được chọn từ mảng.",
+            en: "Enter the selected item from the array.",
+          },
+          'const missions = ["read", "code", "share"];\nconsole.log(missions[1]);',
+          "code",
+        ),
+        starterCodeOutputMission(
+          {
+            ko: "함수 호출",
+            vi: "Gọi hàm",
+            en: "Call a function",
+          },
+          {
+            ko: "함수를 호출한 뒤 출력되는 값을 입력하세요.",
+            vi: "Nhập giá trị được in ra sau khi gọi hàm.",
+            en: "Enter the value printed after calling the function.",
+          },
+          "function double(value) {\n  return value * 2;\n}\nconsole.log(double(4));",
+          "8",
+        ),
+      ],
+    }],
   };
 }
 
@@ -492,43 +622,73 @@ export async function createStarterQuest(labId: string) {
   const template = buildStarterQuest();
   const chapterResult = await supabase
     .from("quest_chapters")
-    .insert({
-      lab_id: labId,
-      order_index: 1,
-      title_i18n: template.chapter.title_i18n,
-      description_i18n: template.chapter.description_i18n,
-      active: true,
-    })
-    .select(CHAPTER_SELECT)
-    .single();
-  if (chapterResult.error) throw chapterResult.error;
-
-  const chapter = chapterResult.data as QuestChapter;
-  const missionResult = await supabase
-    .from("quest_missions")
     .insert(
-      template.missions.map((mission, index) => ({
-        chapter_id: chapter.id,
+      template.chapters.map((chapter, index) => ({
+        lab_id: labId,
         order_index: index + 1,
-        mission_type: mission.mission_type,
-        title_i18n: mission.title_i18n,
-        instructions_i18n: mission.instructions_i18n,
-        content:
-          "options" in mission ? { options: mission.options } : {},
-        validation:
-          "answerIndex" in mission
-            ? { answerIndex: mission.answerIndex }
-            : {},
+        title_i18n: chapter.title_i18n,
+        description_i18n: chapter.description_i18n,
+        unlock_rule: chapter.unlock_rule,
         active: true,
       })),
     )
+    .select(CHAPTER_SELECT);
+  if (chapterResult.error) throw chapterResult.error;
+
+  const chapters = [...((chapterResult.data ?? []) as QuestChapter[])].sort(
+    (a, b) => a.order_index - b.order_index,
+  );
+  if (chapters.length !== template.chapters.length) {
+    if (chapters.length > 0) {
+      await supabase
+        .from("quest_chapters")
+        .delete()
+        .in(
+          "id",
+          chapters.map((chapter) => chapter.id),
+        );
+    }
+    throw new Error("Could not create the complete starter Quest.");
+  }
+  const missionResult = await supabase
+    .from("quest_missions")
+    .insert(
+      template.chapters.flatMap((templateChapter, chapterIndex) =>
+        templateChapter.missions.map((mission, missionIndex) => ({
+          chapter_id: chapters[chapterIndex].id,
+          order_index: missionIndex + 1,
+          mission_type: mission.mission_type,
+          title_i18n: mission.title_i18n,
+          instructions_i18n: mission.instructions_i18n,
+          content:
+            "content" in mission
+              ? mission.content
+              : "options" in mission
+                ? { options: mission.options }
+                : {},
+          validation:
+            "validation" in mission
+              ? mission.validation
+              : "answerIndex" in mission
+                ? { answerIndex: mission.answerIndex }
+                : {},
+          active: true,
+        })),
+      ),
+    )
     .select(MISSION_SELECT);
   if (missionResult.error) {
-    await supabase.from("quest_chapters").delete().eq("id", chapter.id);
+    await supabase
+      .from("quest_chapters")
+      .delete()
+      .in(
+        "id",
+        chapters.map((chapter) => chapter.id),
+      );
     throw missionResult.error;
   }
   return {
-    chapter,
+    chapters,
     missions: (missionResult.data ?? []) as QuestMission[],
   };
 }

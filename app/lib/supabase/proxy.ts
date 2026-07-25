@@ -4,6 +4,7 @@ import { resolveAuthenticatedFeatureRedirect } from "../feature-routing";
 import type { FeatureAccessRole } from "../feature-access";
 
 const DEFAULT_OS_LAB_ID = "11111111-1111-4111-8111-111111111111";
+const DEFAULT_OS_LAB_SLUG = "os-lab";
 
 type LabQuestClaims = {
   sub?: string;
@@ -30,6 +31,9 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims as LabQuestClaims | undefined;
   const isAuthenticated = Boolean(claims?.sub);
+  let activeLabSlug =
+    request.cookies.get("lablog-active-lab-slug")?.value ??
+    DEFAULT_OS_LAB_SLUG;
   let membershipRole: FeatureAccessRole = "member";
   let chapterTwoCompletedAt =
     typeof claims?.user_metadata?.labquest_chapter2_completed_at === "string"
@@ -43,7 +47,7 @@ export async function updateSession(request: NextRequest) {
     const activeLabId =
       request.cookies.get("lablog-active-lab-id")?.value ??
       DEFAULT_OS_LAB_ID;
-    const [membership, progress, platformAdmin] = await Promise.all([
+    const [membership, progress, platformAdmin, activeLab] = await Promise.all([
       supabase
         .from("lab_members")
         .select("membership_role")
@@ -61,7 +65,20 @@ export async function updateSession(request: NextRequest) {
         .select("user_id")
         .eq("user_id", claims?.sub)
         .maybeSingle(),
+      supabase
+        .from("labs")
+        .select("slug")
+        .eq("id", activeLabId)
+        .maybeSingle(),
     ]);
+    if (!activeLab.error && activeLab.data?.slug) {
+      activeLabSlug = String(activeLab.data.slug);
+      response.cookies.set("lablog-active-lab-slug", activeLabSlug, {
+        path: "/",
+        maxAge: 31_536_000,
+        sameSite: "lax",
+      });
+    }
     if (
       !membership.error &&
       ["owner", "admin", "member"].includes(
@@ -95,6 +112,7 @@ export async function updateSession(request: NextRequest) {
       userId: claims.sub,
       memberPathId,
       role: membershipRole,
+      labSlug: activeLabSlug,
       chapterTwoCompletedAt,
       chapterThreeCompletedAt,
     });

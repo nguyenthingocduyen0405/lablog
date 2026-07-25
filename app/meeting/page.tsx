@@ -7,6 +7,8 @@ import CharacterAvatar from "../components/character-avatar";
 import JitsiRoom from "../components/jitsi-room";
 import { getCurrentUser, type AuthUser } from "../lib/auth";
 import { useI18n, type Locale } from "../lib/i18n";
+import { useLab } from "../lib/lab-tenancy";
+import { labQuestHref } from "../lib/lab-routing";
 import {
   completeTeamProject,
   createTeamProject,
@@ -72,6 +74,7 @@ function formatDateTime(value: string | null, locale: Locale) {
 export default function MeetingPage() {
   const router = useRouter();
   const { locale, l } = useI18n();
+  const { activeLab } = useLab();
   const unknownDate = l("미정", "Chưa xác định", "TBD");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [members, setMembers] = useState<LabMember[]>([]);
@@ -107,11 +110,18 @@ export default function MeetingPage() {
           return;
         }
         if (!currentUser.chapterTwoCompletedAt) {
-          router.replace("/labquest?chapter=2&locked=project");
+          router.replace(
+            labQuestHref(activeLab.slug, {
+              chapter: 2,
+              locked: "project",
+            }),
+          );
           return;
         }
         if (!currentUser.chapterThreeCompletedAt) {
-          router.replace("/labquest?chapter=3");
+          router.replace(
+            labQuestHref(activeLab.slug, { chapter: 3 }),
+          );
           return;
         }
         const [loadedProjects, loadedInvites, loadedMembers] =
@@ -144,7 +154,7 @@ export default function MeetingPage() {
     return () => {
       cancelled = true;
     };
-  }, [l, router]);
+  }, [activeLab.slug, l, router]);
 
   useEffect(() => {
     if (!selectedProjectId) return;
