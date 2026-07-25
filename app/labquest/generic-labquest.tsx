@@ -13,6 +13,7 @@ import {
 } from "../lib/auth";
 import { useLab } from "../lib/lab-tenancy";
 import { useI18n } from "../lib/i18n";
+import { labTourHref } from "../lib/lab-routing";
 import {
   evaluateQuestAnswer,
   isQuestCompletionMilestoneSaved,
@@ -121,6 +122,10 @@ export default function GenericLabQuest() {
         getCurrentUser(),
       ]).then(async ([chapterResult, missionResult, userResult]) => {
         if (cancelled) return;
+        if (userResult && !userResult.labTourCompletedAt) {
+          router.replace(labTourHref(activeLab.slug));
+          return;
+        }
         if (chapterResult.error) setError(chapterResult.error.message);
         else if (missionResult.error) setError(missionResult.error.message);
         else {

@@ -5,6 +5,10 @@ export type LabQuestHrefOptions = {
   locked?: string;
 };
 
+export function labTourHref(labSlug: string) {
+  return "/lab-tour?" + new URLSearchParams({ lab: labSlug }).toString();
+}
+
 export function labQuestHref(
   labSlug: string,
   options: LabQuestHrefOptions = {},

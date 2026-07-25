@@ -12,6 +12,7 @@ import {
 
 export type AuthUser = LabMember & {
   email: string;
+  labTourCompletedAt: string | null;
   onboardingCompletedAt: string | null;
   chapterTwoCompletedAt: string | null;
   chapterThreeCompletedAt: string | null;
@@ -66,6 +67,7 @@ function mapProfile(profile: Record<string, unknown>, email = ""): AuthUser {
     ),
     avatarConfig: mapAvatarConfig(profile.avatar_config),
     labSeat: typeof profile.lab_seat === "number" ? profile.lab_seat : null,
+    labTourCompletedAt: null,
     onboardingCompletedAt:
       typeof profile.onboarding_completed_at === "string"
         ? profile.onboarding_completed_at
@@ -161,7 +163,7 @@ async function fetchCurrentUser(activeLabId: string): Promise<AuthUser | null> {
     supabase
       .from("lab_member_progress")
       .select(
-        "onboarding_completed_at,chapter_two_completed_at,chapter_three_completed_at",
+        "lab_tour_completed_at,onboarding_completed_at,chapter_two_completed_at,chapter_three_completed_at",
       )
       .eq("lab_id", activeLabId)
       .eq("user_id", authData.user.id)
@@ -184,6 +186,11 @@ async function fetchCurrentUser(activeLabId: string): Promise<AuthUser | null> {
       : "member";
   const hasLabProgress = !progressResult.error && Boolean(labProgress);
   const useLegacyOsData = activeLabId === DEFAULT_OS_LAB_ID && !hasLabProgress;
+  const rawOnboardingCompletedAt = hasLabProgress
+    ? labProgress?.onboarding_completed_at ?? null
+    : useLegacyOsData
+      ? profile.onboarding_completed_at ?? null
+      : null;
   const user = {
     ...mapProfile(profile, authData.user.email ?? ""),
     labSeat:
@@ -194,13 +201,15 @@ async function fetchCurrentUser(activeLabId: string): Promise<AuthUser | null> {
             ? profile.lab_seat
             : null
           : null,
-    onboardingCompletedAt: resolveFeatureCompletion(
+    labTourCompletedAt: resolveFeatureCompletion(
       membershipRole,
       hasLabProgress
-        ? labProgress?.onboarding_completed_at ?? null
-        : useLegacyOsData
-          ? profile.onboarding_completed_at ?? null
-          : null,
+        ? labProgress?.lab_tour_completed_at ?? rawOnboardingCompletedAt
+        : rawOnboardingCompletedAt,
+    ),
+    onboardingCompletedAt: resolveFeatureCompletion(
+      membershipRole,
+      rawOnboardingCompletedAt,
     ),
     chapterTwoCompletedAt: resolveFeatureCompletion(
       membershipRole,
@@ -256,6 +265,7 @@ export async function completeOnboarding(userId: string) {
     {
       lab_id: getActiveLabId(),
       user_id: userId,
+      lab_tour_completed_at: completedAt,
       onboarding_completed_at: completedAt,
       updated_at: completedAt,
     },
@@ -264,9 +274,36 @@ export async function completeOnboarding(userId: string) {
   if (error) throw error;
   if (currentUserCache?.value.id === userId) {
     currentUserCache = {
-      value: { ...currentUserCache.value, onboardingCompletedAt: completedAt },
+      value: {
+        ...currentUserCache.value,
+        labTourCompletedAt: completedAt,
+        onboardingCompletedAt: completedAt,
+      },
       expiresAt: Date.now() + USER_CACHE_MS,
       labId: getActiveLabId(),
+    };
+  }
+}
+
+export async function completeLabTour(userId: string) {
+  const completedAt = new Date().toISOString();
+  const activeLabId = getActiveLabId();
+  const supabase = createClient();
+  const { error } = await supabase.from("lab_member_progress").upsert(
+    {
+      lab_id: activeLabId,
+      user_id: userId,
+      lab_tour_completed_at: completedAt,
+      updated_at: completedAt,
+    },
+    { onConflict: "lab_id,user_id" },
+  );
+  if (error) throw error;
+  if (currentUserCache?.value.id === userId) {
+    currentUserCache = {
+      value: { ...currentUserCache.value, labTourCompletedAt: completedAt },
+      expiresAt: Date.now() + USER_CACHE_MS,
+      labId: activeLabId,
     };
   }
 }

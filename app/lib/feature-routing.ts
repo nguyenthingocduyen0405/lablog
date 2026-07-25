@@ -2,7 +2,7 @@ import {
   resolveFeatureCompletion,
   type FeatureAccessRole,
 } from "./feature-access";
-import { labQuestHref } from "./lab-routing";
+import { labQuestHref, labTourHref } from "./lab-routing";
 
 type FeatureRouteAccess = {
   path: string;
@@ -53,11 +53,14 @@ export type PortalFeatureId = "feed" | "mission" | "project";
 export function resolvePortalQuestHref(
   userId: string,
   onboardingCompleted: boolean,
+  labTourCompleted: boolean,
   labSlug: string,
 ) {
   return onboardingCompleted
     ? `/members/${userId}`
-    : labQuestHref(labSlug);
+    : labTourCompleted
+      ? labQuestHref(labSlug)
+      : labTourHref(labSlug);
 }
 
 export function resolvePortalFeatureHref(

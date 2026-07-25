@@ -11,7 +11,7 @@ import LanguageSwitcher from "../../components/language-switcher";
 import NotificationsBell from "../../components/notifications-bell";
 import { getCurrentUser, logoutAccount, type AuthUser } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
-import { labQuestHref } from "../../lib/lab-routing";
+import { labQuestHref, labTourHref } from "../../lib/lab-routing";
 import { useLab } from "../../lib/lab-tenancy";
 import {
   calculateCurrentStreak,
@@ -46,7 +46,11 @@ export default function MemberProfilePage() {
           return;
         }
         if (!user.onboardingCompletedAt) {
-          router.replace(labQuestHref(activeLab.slug));
+          router.replace(
+            user.labTourCompletedAt
+              ? labQuestHref(activeLab.slug)
+              : labTourHref(activeLab.slug),
+          );
           return;
         }
         const [

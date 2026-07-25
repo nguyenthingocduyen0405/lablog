@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import CharacterAvatar from "../components/character-avatar";
 import LabRoomMap from "../components/lab-room-map";
-import { getCurrentUser, type AuthUser } from "../lib/auth";
+import { completeLabTour, getCurrentUser, type AuthUser } from "../lib/auth";
 import { LAB_SEATS, placeMembersBySeat } from "../lib/lab-map";
 import {
   DEFAULT_AVATAR_CONFIG,
@@ -13,7 +13,11 @@ import {
   type LabMember,
 } from "../lib/lab-social";
 import { useI18n } from "../lib/i18n";
-import { labQuestHref } from "../lib/lab-routing";
+import {
+  labQuestHref,
+  labTourHref,
+  resolveLabDeepLink,
+} from "../lib/lab-routing";
 import { useLab } from "../lib/lab-tenancy";
 
 type TourStage = "overview" | "seat" | "introductions" | "game" | "complete";
@@ -100,6 +104,61 @@ const labObjects = [
 ] as const;
 
 export default function LabTourPage() {
+  return (
+    <Suspense fallback={<TourLoading />}>
+      <RoutedLabTour />
+    </Suspense>
+  );
+}
+
+function RoutedLabTour() {
+  const { activeLab, labs, isLoading, switchLab } = useLab();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedSlug = searchParams.get("lab")?.trim() ?? "";
+  const decision = useMemo(
+    () =>
+      requestedSlug
+        ? resolveLabDeepLink(requestedSlug, activeLab, labs, isLoading)
+        : ({ action: "wait" } as const),
+    [activeLab, isLoading, labs, requestedSlug],
+  );
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!requestedSlug) {
+      router.replace(labTourHref(activeLab.slug));
+      return;
+    }
+    if (decision.action === "manage") {
+      router.replace("/labs");
+      return;
+    }
+    if (decision.action === "open" && decision.lab.id !== activeLab.id) {
+      switchLab(decision.lab, labTourHref(decision.lab.slug));
+    }
+  }, [activeLab.id, activeLab.slug, decision, isLoading, requestedSlug, router, switchLab]);
+
+  if (
+    isLoading ||
+    !requestedSlug ||
+    decision.action !== "open" ||
+    decision.lab.id !== activeLab.id
+  ) {
+    return <TourLoading />;
+  }
+  return <LabTourExperience />;
+}
+
+function TourLoading() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#11130f] text-white">
+      <p className="text-sm font-black text-white/40">LAB TOUR...</p>
+    </main>
+  );
+}
+
+function LabTourExperience() {
   const { activeLab } = useLab();
   const router = useRouter();
   const { locale, l } = useI18n();
@@ -122,10 +181,6 @@ export default function LabTourPage() {
           router.replace("/login");
           return;
         }
-        if (currentUser.onboardingCompletedAt) {
-          router.replace(`/members/${currentUser.id}`);
-          return;
-        }
         const loadedMembers = await loadLabMembers();
         if (!cancelled) {
           setUser(currentUser);
@@ -140,7 +195,7 @@ export default function LabTourPage() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [activeLab.slug, router]);
 
   const roomMembers = useMemo(() => placeMembersBySeat(members), [members]);
   const currentSpeaker = roomMembers[speakerIndex];
@@ -212,7 +267,7 @@ export default function LabTourPage() {
     if (nextMember >= 0) {
       setSpeakerIndex(nextMember);
     } else {
-      setStage("game");
+      setStage(activeLab.slug === "os-lab" ? "game" : "complete");
       setFeedback(
         l(
           "첫 번째 물건을 찾아보세요!",
@@ -270,6 +325,7 @@ export default function LabTourPage() {
     }
     setIsFinishing(true);
     try {
+      await completeLabTour(user.id);
       router.push(labQuestHref(activeLab.slug));
     } finally {
       setIsFinishing(false);
@@ -279,7 +335,7 @@ export default function LabTourPage() {
   if (!user)
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#11130f] text-white">
-        <p className="text-sm font-black text-white/40">OS LAB TOUR...</p>
+        <p className="text-sm font-black text-white/40">{activeLab.name} TOUR...</p>
       </main>
     );
 
@@ -289,7 +345,7 @@ export default function LabTourPage() {
       <header className="relative z-40 flex items-center justify-between px-5 py-4 sm:px-8">
         <div>
           <p className="text-xs font-black tracking-[0.24em] text-[#ffd84d]">
-            OS LAB
+            {activeLab.name}
           </p>
           <p className="mt-1 text-[10px] font-bold text-white/35">
             {l(
@@ -421,9 +477,9 @@ export default function LabTourPage() {
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-500">
                   {l(
-                    "OS Lab에 오신 것을 환영합니다",
-                    "Chào mừng đến OS Lab",
-                    "Welcome to OS Lab",
+                    `${activeLab.name}에 오신 것을 환영합니다`,
+                    `Chào mừng đến ${activeLab.name}`,
+                    `Welcome to ${activeLab.name}`,
                   )}
                 </p>
                 <h1 className="mt-1 text-2xl font-black tracking-[-.04em]">
@@ -507,17 +563,17 @@ export default function LabTourPage() {
               <div className="min-w-0 flex-1">
                 <p className="font-black">
                   {l(
-                    `안녕하세요! 저는 ${currentSpeaker?.name ?? "OS Lab 멤버"}예요 👋`,
-                    `Xin chào! Tôi là ${currentSpeaker?.name ?? "thành viên OS Lab"} 👋`,
-                    `Hello! I'm ${currentSpeaker?.name ?? "an OS Lab member"} 👋`,
+                    `안녕하세요! 저는 ${currentSpeaker?.name ?? `${activeLab.name} 멤버`}예요 👋`,
+                    `Xin chào! Tôi là ${currentSpeaker?.name ?? `thành viên ${activeLab.name}`} 👋`,
+                    `Hello! I'm ${currentSpeaker?.name ?? `a ${activeLab.name} member`} 👋`,
                   )}
                 </p>
                 <p className="mt-1 text-xs font-semibold text-stone-500">
                   {currentSpeaker?.role ||
                     l(
-                      "OS Lab에서 함께 연구하고 있어요.",
-                      "Chúng ta đang cùng nghiên cứu tại OS Lab.",
-                      "We research together at OS Lab.",
+                      `${activeLab.name}에서 함께 연구하고 있어요.`,
+                      `Chúng ta đang cùng nghiên cứu tại ${activeLab.name}.`,
+                      `We research together at ${activeLab.name}.`,
                     )}
                 </p>
               </div>

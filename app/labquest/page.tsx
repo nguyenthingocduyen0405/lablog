@@ -14,7 +14,11 @@ import ChapterTwo from "./chapter-two";
 import ChapterThree from "./chapter-three";
 import { useI18n } from "../lib/i18n";
 import { useLab } from "../lib/lab-tenancy";
-import { labQuestHref, resolveLabDeepLink } from "../lib/lab-routing";
+import {
+  labQuestHref,
+  labTourHref,
+  resolveLabDeepLink,
+} from "../lib/lab-routing";
 import GenericLabQuest from "./generic-labquest";
 import {
   completeOsLabMission,
@@ -187,10 +191,16 @@ function RoutedLabQuest() {
     return <Loading />;
   }
   if (activeLab.slug !== "os-lab") return <GenericLabQuest />;
-  return <OsLabQuestChapterOne labId={activeLab.id} />;
+  return <OsLabQuestChapterOne labId={activeLab.id} labSlug={activeLab.slug} />;
 }
 
-function OsLabQuestChapterOne({ labId }: { labId: string }) {
+function OsLabQuestChapterOne({
+  labId,
+  labSlug,
+}: {
+  labId: string;
+  labSlug: string;
+}) {
   const router = useRouter();
   const { l } = useI18n();
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -226,6 +236,10 @@ function OsLabQuestChapterOne({ labId }: { labId: string }) {
     getCurrentUser()
       .then(async (currentUser) => {
         if (!currentUser) return router.replace("/login");
+        if (!currentUser.labTourCompletedAt) {
+          router.replace(labTourHref(labSlug));
+          return;
+        }
         if (cancelled) return;
         setUser(currentUser);
         let loadedCatalog: OsLabQuestCatalog | null = null;
@@ -284,7 +298,7 @@ function OsLabQuestChapterOne({ labId }: { labId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [labId, router]);
+  }, [labId, labSlug, router]);
 
   function finishMission(number: number) {
     if (!user) return;
@@ -372,7 +386,7 @@ function OsLabQuestChapterOne({ labId }: { labId: string }) {
   if (screen === "intro")
     return (
       <Intro
-        onBack={() => router.push("/lab-tour")}
+        onBack={() => router.push(labTourHref(labSlug))}
         onStart={() => {
           window.localStorage.setItem(
             `labquest-chapter1-started-${user.id}`,

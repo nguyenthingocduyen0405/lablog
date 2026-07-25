@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   labQuestHref,
+  labTourHref,
   resolveLabDeepLink,
   shouldNavigateForLabSwitch,
 } from "../../app/lib/lab-routing";
@@ -138,6 +139,44 @@ test("a Lab Quest URL identifies the exact lab and preserves locked chapter cont
     action: "open",
     lab: cvLab,
   });
+});
+
+test("every lab gets its own tenant-scoped Lab Tour URL", () => {
+  expect(labTourHref("mc-labs")).toBe("/lab-tour?lab=mc-labs");
+  expect(labTourHref("ml-lab")).toBe("/lab-tour?lab=ml-lab");
+  expect(labTourHref("cv-labs")).toBe("/lab-tour?lab=cv-labs");
+
+  const labTour = readFileSync(
+    resolve(process.cwd(), "app/lab-tour/page.tsx"),
+    "utf8",
+  );
+  expect(labTour).toContain("resolveLabDeepLink(");
+  expect(labTour).toContain("switchLab(decision.lab, labTourHref(decision.lab.slug))");
+  expect(labTour).toContain("{activeLab.name}");
+  expect(labTour).toContain('activeLab.slug === "os-lab" ? "game" : "complete"');
+  expect(labTour).not.toContain("if (currentUser.labTourCompletedAt)");
+
+  const portal = readFileSync(
+    resolve(process.cwd(), "app/labs/[slug]/page.tsx"),
+    "utf8",
+  );
+  expect(portal).toContain("href: labTourHref(lab.slug)");
+});
+
+test("Lab Tour completion is isolated in each lab membership", () => {
+  const migration = readFileSync(
+    resolve(
+      process.cwd(),
+      "supabase/migrations/20260808000000_per_lab_tour_progress.sql",
+    ),
+    "utf8",
+  );
+  const auth = readFileSync(resolve(process.cwd(), "app/lib/auth.ts"), "utf8");
+
+  expect(migration).toContain("add column if not exists lab_tour_completed_at");
+  expect(migration).toContain("progress.lab_id = first_mission.lab_id");
+  expect(auth).toContain("lab_tour_completed_at: completedAt");
+  expect(auth).toContain("lab_id: activeLabId");
 });
 
 test("the player activates the requested lab before rendering its quest", () => {

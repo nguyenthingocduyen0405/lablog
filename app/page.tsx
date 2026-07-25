@@ -7,7 +7,7 @@ import { getCurrentUser, logoutAccount, type AuthUser } from "./lib/auth";
 import CharacterAvatar from "./components/character-avatar";
 import LanguageSwitcher from "./components/language-switcher";
 import { useI18n } from "./lib/i18n";
-import { labQuestHref } from "./lib/lab-routing";
+import { labQuestHref, labTourHref } from "./lib/lab-routing";
 import { useLab } from "./lib/lab-tenancy";
 
 function OsLabLogo() {
@@ -49,6 +49,14 @@ export default function ReadyPage() {
         return;
       }
       if (activeLab.slug !== "os-lab") {
+        router.replace(
+          currentUser.labTourCompletedAt
+            ? labQuestHref(activeLab.slug)
+            : labTourHref(activeLab.slug),
+        );
+        return;
+      }
+      if (currentUser.labTourCompletedAt) {
         router.replace(labQuestHref(activeLab.slug));
         return;
       }
@@ -67,7 +75,7 @@ export default function ReadyPage() {
   async function startOnboarding() {
     if (!user || isStarting) return;
     setIsStarting(true);
-    router.push("/lab-tour");
+    router.push(labTourHref(activeLab.slug));
   }
 
   if (!user) {

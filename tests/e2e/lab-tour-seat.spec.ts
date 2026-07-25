@@ -15,7 +15,7 @@ test("an authenticated member can click a selectable lab seat", async ({ page })
   await page.locator('button[type="submit"]').click();
   await page.waitForURL((url) => url.pathname !== "/login");
 
-  await page.goto("/lab-tour");
+  await page.goto("/lab-tour?lab=os-lab");
   await page
     .getByRole("button", { name: /내 자리 선택|Chọn chỗ của tôi|Choose my seat/ })
     .click();

@@ -7,11 +7,14 @@ import {
 } from "../../app/lib/feature-routing";
 
 test("unlocked ML Lab opens the member home instead of the game", () => {
-  expect(resolvePortalQuestHref("ml-member-id", true, "ml-lab")).toBe(
+  expect(resolvePortalQuestHref("ml-member-id", true, true, "ml-lab")).toBe(
     "/members/ml-member-id",
   );
-  expect(resolvePortalQuestHref("ml-member-id", false, "ml-lab")).toBe(
+  expect(resolvePortalQuestHref("ml-member-id", false, true, "ml-lab")).toBe(
     "/labquest?lab=ml-lab",
+  );
+  expect(resolvePortalQuestHref("ml-member-id", false, false, "ml-lab")).toBe(
+    "/lab-tour?lab=ml-lab",
   );
 
   const portal = readFileSync(
