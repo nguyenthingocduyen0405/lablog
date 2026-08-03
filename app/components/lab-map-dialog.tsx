@@ -6,9 +6,11 @@ import { placeMembersBySeat } from "../lib/lab-map";
 import { loadLabMembers, saveLabSeat, type LabMember } from "../lib/lab-social";
 import LabRoomMap from "./lab-room-map";
 import { useI18n } from "../lib/i18n";
+import { useLab } from "../lib/lab-tenancy";
 
 export default function LabMapDialog({ user, onClose }: { user: AuthUser; onClose: () => void }) {
   const { l } = useI18n();
+  const { activeLab } = useLab();
   const [members, setMembers] = useState<LabMember[]>([]);
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -25,7 +27,10 @@ export default function LabMapDialog({ user, onClose }: { user: AuthUser; onClos
   }, [l, onClose, user.id]);
 
   const savedSeat = useMemo(() => members.find((member) => member.id === user.id)?.labSeat ?? null, [members, user.id]);
-  const roomMembers = useMemo(() => placeMembersBySeat(members), [members]);
+  const roomMembers = useMemo(
+    () => placeMembersBySeat(members, activeLab.mapSeatLayout.length),
+    [activeLab.mapSeatLayout.length, members],
+  );
 
   async function updateSeat() {
     if (selectedSeat === null || selectedSeat === savedSeat || isSaving) return;
@@ -50,7 +55,13 @@ export default function LabMapDialog({ user, onClose }: { user: AuthUser; onClos
           <div><p className="text-[10px] font-black uppercase tracking-[.22em] text-[#ffd84d]">2.5D LAB MAP</p><h2 id="lab-map-title" className="mt-1 text-2xl font-black tracking-[-.04em]">{l("연구실 자리 배치", "Sơ đồ chỗ ngồi phòng lab", "Lab seating map")}</h2><p className="mt-1 text-xs font-semibold text-white/45">{l("빈 자리를 눌러 내 위치를 확인하거나 변경할 수 있어요.", "Nhấn vào chỗ trống để xem hoặc thay đổi vị trí của bạn.", "Select an empty seat to view or change your position.")}</p></div>
           <button type="button" onClick={onClose} aria-label={l("랩 지도 닫기", "Đóng bản đồ lab", "Close lab map")} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-2xl text-white/70 hover:bg-white/20 hover:text-white">×</button>
         </header>
-        <div className="relative mx-3 aspect-[16/9] min-h-[18rem] overflow-hidden rounded-[1.4rem] bg-[#d9dcd8] sm:mx-6">
+        <div
+          className="relative mx-auto overflow-hidden rounded-[1.4rem] bg-[#d9dcd8]"
+          style={{
+            aspectRatio: activeLab.mapAspectRatio,
+            width: `min(calc(100% - 1.5rem), calc(60vh * ${activeLab.mapAspectRatio}))`,
+          }}
+        >
           <LabRoomMap members={members} currentUserId={user.id} selectedSeat={selectedSeat} interactive onSeatSelect={setSelectedSeat} />
         </div>
         <footer className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">

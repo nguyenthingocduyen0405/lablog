@@ -25,13 +25,23 @@ export default function NotificationsBell({ userId }: { userId: string }) {
       if (!cancelled) setNotifications(items);
     };
     refresh();
+    const handleNotificationsChanged = () =>
+      refresh().catch(() => undefined);
     const interval = window.setInterval(
       () => refresh().catch(() => undefined),
       30000,
     );
+    window.addEventListener(
+      "lab-notifications-changed",
+      handleNotificationsChanged,
+    );
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      window.removeEventListener(
+        "lab-notifications-changed",
+        handleNotificationsChanged,
+      );
     };
   }, [userId]);
 
@@ -111,7 +121,11 @@ export default function NotificationsBell({ userId }: { userId: string }) {
                 >
                   {item.type.endsWith("_reminder") ? (
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#ffd84d] text-xl">
-                      {item.type === "streak_reminder" ? "🔥" : "🎯"}
+                      {item.type === "streak_reminder"
+                        ? "🔥"
+                        : item.type === "first_record_reminder"
+                          ? "✨"
+                          : "🎯"}
                     </span>
                   ) : (
                     <CharacterAvatar
@@ -141,6 +155,23 @@ export default function NotificationsBell({ userId }: { userId: string }) {
                             "오늘 아직 업데이트가 없어요. 잘하고 있어?",
                             "Hôm nay bạn chưa cập nhật. Mọi việc ổn chứ?",
                             "No update yet today. How is it going?",
+                          )}
+                        </span>
+                      </>
+                    ) : item.type === "first_record_reminder" ? (
+                      <>
+                        <span className="font-black">
+                          {l(
+                            "오늘 첫 기록을 남겨보세요",
+                            "Hãy để lại ghi chép đầu tiên hôm nay",
+                            "Create your first entry today",
+                          )}
+                        </span>
+                        <span className="block text-stone-600">
+                          {l(
+                            "작은 기록 하나가 성장의 시작이에요.",
+                            "Một ghi chép nhỏ cũng có thể mở đầu cho hành trình phát triển.",
+                            "One small entry can be the start of your growth.",
                           )}
                         </span>
                       </>

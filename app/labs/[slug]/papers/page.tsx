@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { useParams, useRouter } from "next/navigation";
 import { useI18n } from "../../../lib/i18n";
 import { useLab } from "../../../lib/lab-tenancy";
+import { useRolePreview } from "../../../lib/role-preview";
 import { createClient } from "../../../lib/supabase/client";
 import {
   createPaper,
@@ -32,6 +33,7 @@ export default function PaperClubPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const { labs, isLoading } = useLab();
+  const { previewLabRole } = useRolePreview();
   const { locale, l } = useI18n();
   const lab = useMemo(
     () => labs.find((candidate) => candidate.slug === slug),
@@ -171,7 +173,8 @@ export default function PaperClubPage() {
   }
 
   if (isLoading || !lab) return <Loading />;
-  const canManage = lab.membershipRole === "owner" || lab.membershipRole === "admin";
+  const visibleRole = previewLabRole(lab.membershipRole);
+  const canManage = visibleRole === "owner" || visibleRole === "admin";
   const summary = paperReadingSummary(papers, progress);
   const selectedPaper = papers.find((paper) => paper.id === selectedPaperId);
   const selectedComments = comments.filter((comment) => comment.paper_id === selectedPaperId);

@@ -8,9 +8,13 @@ import {
   type PlatformOverview,
 } from "../lib/admin";
 import { useI18n } from "../lib/i18n";
+import { useLab } from "../lib/lab-tenancy";
+import { useRolePreview } from "../lib/role-preview";
 
 export default function PlatformAdminPage() {
   const { l } = useI18n();
+  const { activeLab } = useLab();
+  const { previewRole } = useRolePreview();
   const [overview, setOverview] = useState<PlatformOverview | null>(null);
   const [access, setAccess] = useState<"loading" | "denied" | "allowed">(
     "loading",
@@ -37,6 +41,28 @@ export default function PlatformAdminPage() {
       cancelled = true;
     };
   }, []);
+
+  if (previewRole) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#f5f3ee] px-5">
+        <section className="max-w-lg rounded-[2rem] bg-white p-8 text-center shadow-sm">
+          <h1 className="text-2xl font-black">
+            {l("역할 미리보기 활성", "Đang xem thử vai trò", "Role preview active")}
+          </h1>
+          <p className="mt-3 text-sm font-bold text-stone-500">
+            {l(
+              "플랫폼 관리 화면은 실제 권한 모드에서만 표시됩니다.",
+              "Giao diện quản trị hệ thống chỉ hiển thị trong chế độ quyền thực.",
+              "Platform administration is only shown in actual-access mode.",
+            )}
+          </p>
+          <Link href={"/labs/" + activeLab.slug} className="mt-6 inline-block rounded-full bg-stone-950 px-6 py-3 font-black text-white">
+            {l("Lab 화면 보기", "Xem giao diện Lab", "View lab interface")}
+          </Link>
+        </section>
+      </main>
+    );
+  }
 
   if (access === "loading") return <Loading />;
   if (access === "denied") {
@@ -92,6 +118,9 @@ export default function PlatformAdminPage() {
                   </span>
                 </div>
                 <p className="mt-3 text-sm font-medium text-stone-500">{lab.description || "—"}</p>
+                <Link href={"/labs/" + lab.slug + "/admin"} className="mt-4 inline-block rounded-full bg-stone-950 px-4 py-2 text-sm font-black text-white">
+                  {l("Lab 관리자 지정", "Chỉ định Lab Admin", "Assign Lab Admin")}
+                </Link>
               </article>
             ))}
           </div>

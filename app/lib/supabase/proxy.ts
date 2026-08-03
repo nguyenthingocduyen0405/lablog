@@ -6,6 +6,11 @@ import type { FeatureAccessRole } from "../feature-access";
 const DEFAULT_OS_LAB_ID = "11111111-1111-4111-8111-111111111111";
 const DEFAULT_OS_LAB_SLUG = "os-lab";
 
+import {
+  isLegacyFeatureProgressLab,
+  resolvePersistedFeatureCompletion,
+} from '../feature-access';
+
 type LabQuestClaims = {
   sub?: string;
   user_metadata?: { labquest_chapter2_completed_at?: unknown; labquest_chapter3_completed_at?: unknown };
@@ -92,8 +97,20 @@ export async function updateSession(request: NextRequest) {
       membershipRole = "admin";
     }
     if (!progress.error && progress.data) {
-      chapterTwoCompletedAt = progress.data.chapter_two_completed_at;
-      chapterThreeCompletedAt = progress.data.chapter_three_completed_at;
+      const useLegacyOsData = isLegacyFeatureProgressLab(
+        activeLabId,
+        DEFAULT_OS_LAB_ID,
+      );
+      chapterTwoCompletedAt = resolvePersistedFeatureCompletion(
+        progress.data.chapter_two_completed_at,
+        chapterTwoCompletedAt,
+        useLegacyOsData,
+      );
+      chapterThreeCompletedAt = resolvePersistedFeatureCompletion(
+        progress.data.chapter_three_completed_at,
+        chapterThreeCompletedAt,
+        useLegacyOsData,
+      );
     } else if (activeLabId !== DEFAULT_OS_LAB_ID) {
       chapterTwoCompletedAt = null;
       chapterThreeCompletedAt = null;

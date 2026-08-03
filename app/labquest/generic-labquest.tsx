@@ -14,6 +14,7 @@ import {
 import { useLab } from "../lib/lab-tenancy";
 import { useI18n } from "../lib/i18n";
 import { labTourHref } from "../lib/lab-routing";
+import { useRolePreview } from "../lib/role-preview";
 import {
   evaluateQuestAnswer,
   isQuestCompletionMilestoneSaved,
@@ -93,6 +94,7 @@ async function persistQuestCompletionMilestone(
 
 export default function GenericLabQuest() {
   const { activeLab } = useLab();
+  const { previewLabRole } = useRolePreview();
   const { locale, l } = useI18n();
   const router = useRouter();
   const [chapters, setChapters] = useState<ChapterRow[]>([]);
@@ -378,7 +380,7 @@ export default function GenericLabQuest() {
             <div className="text-5xl">🎮</div>
             <h2 className="mt-4 text-2xl font-black">{l("아직 퀘스트가 없습니다", "Lab này chưa có Quest", "No quests yet")}</h2>
             <p className="mx-auto mt-3 max-w-xl font-medium text-white/45">{l("랩 관리자가 게임을 설계할 수 있습니다.", "Quản lý Lab có thể thiết kế game cho Lab này.", "A lab admin can design games for this lab.")}</p>
-            {(activeLab.membershipRole === "owner" || activeLab.membershipRole === "admin") && <Link href={"/labs/" + activeLab.slug + "/quests"} className="mt-6 inline-block rounded-full bg-gradient-to-r from-[#39ffb6] to-[#4de1ff] px-6 py-3 font-black text-[#031119] shadow-[0_5px_0_#155f70]">{l("게임 설계", "Thiết kế game", "Design games")}</Link>}
+            {(previewLabRole(activeLab.membershipRole) === "owner" || previewLabRole(activeLab.membershipRole) === "admin") && <Link href={"/labs/" + activeLab.slug + "/quests"} className="mt-6 inline-block rounded-full bg-gradient-to-r from-[#39ffb6] to-[#4de1ff] px-6 py-3 font-black text-[#031119] shadow-[0_5px_0_#155f70]">{l("게임 설계", "Thiết kế game", "Design games")}</Link>}
           </section>
         )}
 

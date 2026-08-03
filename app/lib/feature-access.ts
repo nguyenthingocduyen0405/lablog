@@ -28,3 +28,21 @@ export function resolveFeatureCompletion(
     ? completedAt || ADMIN_FEATURE_ACCESS_AT
     : completedAt;
 }
+
+export function resolvePersistedFeatureCompletion(
+  progressCompletedAt: string | null | undefined,
+  legacyCompletedAt: unknown,
+  allowLegacyFallback: boolean,
+) {
+  if (typeof progressCompletedAt === 'string') return progressCompletedAt;
+  return allowLegacyFallback && typeof legacyCompletedAt === 'string'
+    ? legacyCompletedAt
+    : null;
+}
+
+export function isLegacyFeatureProgressLab(
+  activeLabId: string,
+  legacyLabId: string,
+) {
+  return activeLabId === legacyLabId;
+}

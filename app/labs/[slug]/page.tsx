@@ -13,11 +13,13 @@ import { labInitials, normalizeLabAccent } from "../../lib/lab-branding";
 import { labTourHref } from "../../lib/lab-routing";
 import { useLab } from "../../lib/lab-tenancy";
 import { useI18n } from "../../lib/i18n";
+import { useRolePreview } from "../../lib/role-preview";
 
 export default function LabPortalPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const { labs, activeLab, isLoading, switchLab } = useLab();
+  const { previewLabRole } = useRolePreview();
   const { l } = useI18n();
   const [accessState, setAccessState] = useState<{
     labId: string;
@@ -71,7 +73,8 @@ export default function LabPortalPage() {
   }
 
   const accent = normalizeLabAccent(lab.themeConfig.accent ?? "");
-  const canManage = lab.membershipRole === "owner" || lab.membershipRole === "admin";
+  const visibleRole = previewLabRole(lab.membershipRole);
+  const canManage = visibleRole === "owner" || visibleRole === "admin";
   const accessUser = accessState.user;
   const onboardingCompleted = Boolean(accessUser.onboardingCompletedAt);
   const labTourCompleted = Boolean(accessUser.labTourCompletedAt);
@@ -146,7 +149,7 @@ export default function LabPortalPage() {
               </div>
             )}
             <div className="flex-1">
-              <p className="text-xs font-black uppercase tracking-[.22em] text-white/40">LAB PORTAL · {lab.membershipRole}</p>
+              <p className="text-xs font-black uppercase tracking-[.22em] text-white/40">LAB PORTAL · {visibleRole}</p>
               <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-6xl">{lab.name}</h1>
               <p className="mt-4 max-w-2xl font-medium leading-7 text-white/60">{lab.description || l("우리 랩의 디지털 공간", "Không gian số của lab", "Your lab's digital workspace")}</p>
             </div>

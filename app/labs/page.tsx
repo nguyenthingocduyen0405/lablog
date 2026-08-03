@@ -1,35 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isPlatformAdmin } from "../lib/admin";
 import { logoutAccount } from "../lib/auth";
 import { useLab } from "../lib/lab-tenancy";
 import { useI18n } from "../lib/i18n";
 import { createLabSlug } from "../lib/lab-slug";
+import { useRolePreview } from "../lib/role-preview";
 
 export default function LabsPage() {
   const { l } = useI18n();
   const { labs, activeLab, schemaReady, error, createLab, joinLab, switchLab } =
     useLab();
+  const {
+    isPlatformAdmin: platformAdminAccess,
+    previewRole,
+    previewLabRole,
+  } = useRolePreview();
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [platformAdmin, setPlatformAdmin] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    isPlatformAdmin().then((allowed) => {
-      if (!cancelled) setPlatformAdmin(allowed);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const visibleLabs = previewRole
+    ? labs.filter((lab) => lab.id === activeLab.id)
+    : labs;
+  const platformAdmin = platformAdminAccess && !previewRole;
+  const showPlatformControls = platformAdmin;
 
   async function handleCreate(event: FormEvent) {
     event.preventDefault();
@@ -95,7 +94,7 @@ export default function LabsPage() {
         )}
 
         <section className="grid gap-4 md:grid-cols-2">
-          {labs.map((lab) => (
+          {visibleLabs.map((lab) => (
             <article
               key={lab.id}
               className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-black/[0.05]"
@@ -103,7 +102,11 @@ export default function LabsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-black uppercase tracking-wider text-stone-400">
-                    {lab.membershipRole}
+                    {previewLabRole(lab.membershipRole) === "admin"
+                      ? l("LAB 관리자", "QUẢN TRỊ VIÊN LAB", "LAB ADMIN")
+                      : previewLabRole(lab.membershipRole) === "owner"
+                        ? l("LAB 소유자", "CHỦ LAB", "LAB OWNER")
+                        : l("멤버", "THÀNH VIÊN", "MEMBER")}
                   </p>
                   <h2 className="mt-1 text-2xl font-black">{lab.name}</h2>
                   <p className="mt-2 text-sm font-medium text-stone-500">
@@ -116,8 +119,8 @@ export default function LabsPage() {
                   </span>
                 )}
               </div>
-              {(lab.membershipRole === "owner" ||
-                lab.membershipRole === "admin") &&
+              {(previewLabRole(lab.membershipRole) === "owner" ||
+                previewLabRole(lab.membershipRole) === "admin") &&
                 lab.joinCode && (
                   <p className="mt-5 rounded-2xl bg-stone-100 px-4 py-3 text-sm font-bold">
                     {l("초대 코드", "Mã mời", "Join code")}:{" "}
@@ -132,8 +135,8 @@ export default function LabsPage() {
               >
                 {l("랩 포털 열기", "Mở portal lab", "Open lab portal")}
               </Link>
-              {(lab.membershipRole === "owner" ||
-                lab.membershipRole === "admin") && (
+              {(previewLabRole(lab.membershipRole) === "owner" ||
+                previewLabRole(lab.membershipRole) === "admin") && (
                 <div className="mt-3 grid gap-2">
                   <Link href={"/labs/" + lab.slug + "/admin"} className="rounded-2xl bg-[#ffd84d] px-4 py-3 text-center text-sm font-black text-stone-950">
                     {l("랩 관리", "Quản trị Lab", "Lab administration")}
@@ -153,7 +156,7 @@ export default function LabsPage() {
         </section>
 
        <section className="mt-8 grid gap-5 lg:grid-cols-2">
-          {platformAdmin && <form
+          {showPlatformControls && <form
             onSubmit={handleCreate}
             className="rounded-[2rem] bg-white p-6 shadow-sm"
           >

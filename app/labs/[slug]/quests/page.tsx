@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { useParams, useRouter } from "next/navigation";
 import { useI18n } from "../../../lib/i18n";
 import { useLab } from "../../../lib/lab-tenancy";
+import { useRolePreview } from "../../../lib/role-preview";
 import { labQuestHref } from "../../../lib/lab-routing";
 import {
   createStarterQuest,
@@ -74,6 +75,7 @@ export default function QuestEditorPage() {
   const router = useRouter();
   const { locale, l } = useI18n();
   const { labs, isLoading, switchLab } = useLab();
+  const { previewLabRole } = useRolePreview();
   const lab = useMemo(
     () => labs.find((candidate) => candidate.slug === slug),
     [labs, slug],
@@ -113,12 +115,12 @@ export default function QuestEditorPage() {
   useEffect(() => {
     if (isLoading) return;
     if (!lab) return router.replace("/labs");
-    if (!["owner", "admin"].includes(lab.membershipRole)) return;
+    if (!["owner", "admin"].includes(previewLabRole(lab.membershipRole))) return;
     const timeoutId = window.setTimeout(() => {
       void refresh();
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [isLoading, lab, refresh, router]);
+  }, [isLoading, lab, previewLabRole, refresh, router]);
 
   const translated = (text: LocalizedText) =>
     text[locale] || text.ko || text.vi || text.en;
@@ -294,7 +296,7 @@ export default function QuestEditorPage() {
   }
 
   if (isLoading || !lab) return <Loading />;
-  if (!["owner", "admin"].includes(lab.membershipRole)) {
+  if (!["owner", "admin"].includes(previewLabRole(lab.membershipRole))) {
     return (
       <main className="grid min-h-screen place-items-center bg-[#f5f3ee] px-5">
         <section className="rounded-[2rem] bg-white p-8 text-center shadow-sm">

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { LanguageProvider } from "./lib/i18n";
 import { LabProvider } from "./lib/lab-tenancy";
+import { RolePreviewProvider } from "./lib/role-preview";
+import RolePreviewToolbar from "./components/role-preview-toolbar";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -28,7 +30,12 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <LanguageProvider>
-          <LabProvider>{children}</LabProvider>
+          <LabProvider>
+            <RolePreviewProvider>
+              <RolePreviewToolbar />
+              {children}
+            </RolePreviewProvider>
+          </LabProvider>
         </LanguageProvider>
       </body>
     </html>

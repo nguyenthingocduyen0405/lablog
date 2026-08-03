@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
+  isPlatformAdmin,
   loadLabAdminMembers,
   removeLabMember,
   rotateLabJoinCode,
@@ -12,18 +13,35 @@ import {
 } from "../../../lib/admin";
 import { useI18n } from "../../../lib/i18n";
 import { useLab } from "../../../lib/lab-tenancy";
+import { useRolePreview } from "../../../lib/role-preview";
 
 export default function LabAdminPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const { labs, isLoading } = useLab();
+  const { previewRole, previewLabRole } = useRolePreview();
   const { l } = useI18n();
   const lab = useMemo(() => labs.find((item) => item.slug === slug), [labs, slug]);
-  const canManage = lab?.membershipRole === "owner" || lab?.membershipRole === "admin";
+  const visibleRole = lab ? previewLabRole(lab.membershipRole) : null;
+  const canManage = visibleRole === "owner" || visibleRole === "admin";
   const [members, setMembers] = useState<LabAdminMember[]>([]);
   const [rotatedJoinCode, setRotatedJoinCode] = useState<string | null>(null);
   const [busyUserId, setBusyUserId] = useState("");
   const [message, setMessage] = useState("");
+  const [platformAdmin, setPlatformAdmin] = useState(false);
+  const hasPlatformControls = platformAdmin && !previewRole;
+  const canAssignRoles =
+    !previewRole && (lab?.membershipRole === "owner" || platformAdmin);
+
+  useEffect(() => {
+    let cancelled = false;
+    isPlatformAdmin().then((allowed) => {
+      if (!cancelled) setPlatformAdmin(allowed);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !lab) router.replace("/labs");
@@ -103,6 +121,26 @@ export default function LabAdminPage() {
           <div className="flex flex-wrap gap-2"><Link href={"/labs/" + lab.slug + "/settings"} className="rounded-full bg-white px-5 py-3 text-sm font-black shadow-sm">{l("포털 설정", "Cài đặt", "Settings")}</Link><Link href={"/labs/" + lab.slug + "/quests"} className="rounded-full bg-violet-600 px-5 py-3 text-sm font-black text-white">Quest Studio</Link><Link href={"/labs/" + lab.slug} className="rounded-full bg-stone-950 px-5 py-3 text-sm font-black text-white">{l("랩 포털", "Portal", "Portal")}</Link></div>
         </header>
 
+        <section className="mt-6 rounded-2xl bg-violet-50 px-5 py-4 text-sm font-bold text-violet-900">
+          {hasPlatformControls
+            ? l(
+                "플랫폼 관리자는 이 Lab의 관리자를 지정할 수 있습니다.",
+                "Quản trị viên hệ thống có thể chỉ định Lab Admin cho Lab này.",
+                "Platform admins can appoint a Lab Admin for this lab.",
+              )
+            : visibleRole === "admin"
+              ? l(
+                  "Lab 관리자는 이 Lab의 지도와 설정을 업데이트하고 Quest를 설계할 수 있습니다.",
+                  "Lab Admin có thể cập nhật sơ đồ, cài đặt và thiết kế Quest của Lab này.",
+                  "As this lab's Lab Admin, you can update its map and settings and design its Quests.",
+                )
+              : l(
+                  "Lab 소유자는 멤버 목록에서 Lab 관리자를 지정할 수 있습니다.",
+                  "Chủ Lab có thể chỉ định Lab Admin từ danh sách thành viên.",
+                  "Lab owners can appoint Lab Admins from the member list.",
+                )}
+        </section>
+
         <section className="mt-8 grid gap-5 lg:grid-cols-[.7fr_1.3fr]">
           <aside className="self-start rounded-[2rem] bg-stone-950 p-6 text-white shadow-xl">
             <p className="text-xs font-black uppercase tracking-widest text-white/40">JOIN CODE</p>
@@ -116,13 +154,17 @@ export default function LabAdminPage() {
             <div className="mt-5 divide-y divide-stone-100">
               {members.map((member) => {
                 const isOwner = member.membershipRole === "owner";
-                const canRemove = !isOwner && (lab.membershipRole === "owner" || member.membershipRole === "member");
+                const canRemove =
+                  !isOwner &&
+                  (hasPlatformControls ||
+                    visibleRole === "owner" ||
+                    member.membershipRole === "member");
                 return (
                   <article key={member.userId} className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center">
                     <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-stone-100 font-black">{Array.from(member.name).slice(0, 1).join("").toUpperCase()}</div>
                     <div className="min-w-0 flex-1"><h3 className="truncate font-black">{member.name}</h3><p className="truncate text-sm font-medium text-stone-400">{member.profileRole || member.status || "Lab member"}</p></div>
-                    {lab.membershipRole === "owner" && !isOwner ? (
-                      <select disabled={busyUserId === member.userId} value={member.membershipRole} onChange={(event) => void changeRole(member, event.target.value as "admin" | "member")} className="rounded-xl bg-stone-100 px-3 py-2 text-sm font-black"><option value="member">Member</option><option value="admin">Admin</option></select>
+                    {canAssignRoles && !isOwner ? (
+                      <select aria-label={`Role for ${member.name}`} disabled={busyUserId === member.userId} value={member.membershipRole} onChange={(event) => void changeRole(member, event.target.value as "admin" | "member")} className="rounded-xl bg-stone-100 px-3 py-2 text-sm font-black"><option value="member">{l("멤버", "Thành viên", "Member")}</option><option value="admin">{l("Lab 관리자", "Quản trị viên Lab", "Lab admin")}</option></select>
                     ) : <span className="rounded-full bg-stone-100 px-3 py-2 text-xs font-black uppercase">{member.membershipRole}</span>}
                     {canRemove && <button type="button" disabled={busyUserId === member.userId} onClick={() => void removeMember(member)} className="rounded-xl bg-red-50 px-3 py-2 text-sm font-black text-red-600 disabled:opacity-40">{l("삭제", "Xóa", "Remove")}</button>}
                   </article>

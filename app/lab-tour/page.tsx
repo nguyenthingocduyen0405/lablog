@@ -5,7 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import CharacterAvatar from "../components/character-avatar";
 import LabRoomMap from "../components/lab-room-map";
 import { completeLabTour, getCurrentUser, type AuthUser } from "../lib/auth";
-import { LAB_SEATS, placeMembersBySeat } from "../lib/lab-map";
+import { placeMembersBySeat } from "../lib/lab-map";
 import {
   DEFAULT_AVATAR_CONFIG,
   loadLabMembers,
@@ -197,12 +197,16 @@ function LabTourExperience() {
     };
   }, [activeLab.slug, router]);
 
-  const roomMembers = useMemo(() => placeMembersBySeat(members), [members]);
+  const mapSeats = activeLab.mapSeatLayout;
+  const roomMembers = useMemo(
+    () => placeMembersBySeat(members, mapSeats.length),
+    [mapSeats.length, members],
+  );
   const currentSpeaker = roomMembers[speakerIndex];
   const currentTarget = labObjects.find(
     (object) => !foundObjects.includes(object.id),
   );
-  const speakerSeat = LAB_SEATS[speakerIndex];
+  const speakerSeat = mapSeats[speakerIndex];
   const objectLabel = (object: (typeof labObjects)[number]) =>
     object.label[locale];
   const objectHint = (object: (typeof labObjects)[number]) =>
@@ -367,8 +371,11 @@ function LabTourExperience() {
 
       <section className="relative z-10 mx-auto flex min-h-[calc(100vh-72px)] max-w-7xl items-center justify-center px-3 pb-32 sm:px-8 sm:pb-28">
         <div
-          className="relative aspect-[1672/941] w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#d9dcd8] shadow-[0_35px_120px_rgba(0,0,0,.55)]"
-          style={{ width: "min(100%, calc((100vh - 13rem) * 1672 / 941))" }}
+          className="relative w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#d9dcd8] shadow-[0_35px_120px_rgba(0,0,0,.55)]"
+          style={{
+            aspectRatio: activeLab.mapAspectRatio,
+            width: `min(100%, calc((100vh - 13rem) * ${activeLab.mapAspectRatio}))`,
+          }}
         >
           <div
             className="absolute inset-0 origin-center transition-transform duration-700 ease-out"

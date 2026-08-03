@@ -6,7 +6,9 @@ import {
 import { createClient } from "./supabase/client";
 import { DEFAULT_OS_LAB_ID, getActiveLabId } from "./lab-tenancy";
 import {
+  isLegacyFeatureProgressLab,
   resolveFeatureCompletion,
+  resolvePersistedFeatureCompletion,
   type FeatureAccessRole,
 } from "./feature-access";
 
@@ -185,12 +187,15 @@ async function fetchCurrentUser(activeLabId: string): Promise<AuthUser | null> {
       ? "admin"
       : "member";
   const hasLabProgress = !progressResult.error && Boolean(labProgress);
-  const useLegacyOsData = activeLabId === DEFAULT_OS_LAB_ID && !hasLabProgress;
-  const rawOnboardingCompletedAt = hasLabProgress
-    ? labProgress?.onboarding_completed_at ?? null
-    : useLegacyOsData
-      ? profile.onboarding_completed_at ?? null
-      : null;
+  const useLegacyOsData = isLegacyFeatureProgressLab(
+    activeLabId,
+    DEFAULT_OS_LAB_ID,
+  );
+  const rawOnboardingCompletedAt = resolvePersistedFeatureCompletion(
+    hasLabProgress ? labProgress?.onboarding_completed_at : null,
+    profile.onboarding_completed_at,
+    useLegacyOsData,
+  );
   const user = {
     ...mapProfile(profile, authData.user.email ?? ""),
     labSeat:
@@ -213,19 +218,19 @@ async function fetchCurrentUser(activeLabId: string): Promise<AuthUser | null> {
     ),
     chapterTwoCompletedAt: resolveFeatureCompletion(
       membershipRole,
-      hasLabProgress
-        ? labProgress?.chapter_two_completed_at ?? null
-        : useLegacyOsData
-          ? authData.user.user_metadata?.labquest_chapter2_completed_at ?? null
-          : null,
+      resolvePersistedFeatureCompletion(
+        hasLabProgress ? labProgress?.chapter_two_completed_at : null,
+        authData.user.user_metadata?.labquest_chapter2_completed_at,
+        useLegacyOsData,
+      ),
     ),
     chapterThreeCompletedAt: resolveFeatureCompletion(
       membershipRole,
-      hasLabProgress
-        ? labProgress?.chapter_three_completed_at ?? null
-        : useLegacyOsData
-          ? authData.user.user_metadata?.labquest_chapter3_completed_at ?? null
-          : null,
+      resolvePersistedFeatureCompletion(
+        hasLabProgress ? labProgress?.chapter_three_completed_at : null,
+        authData.user.user_metadata?.labquest_chapter3_completed_at,
+        useLegacyOsData,
+      ),
     ),
   };
   if (activeLabId === getActiveLabId()) {
@@ -260,10 +265,11 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
 export async function completeOnboarding(userId: string) {
   const completedAt = new Date().toISOString();
+  const activeLabId = getActiveLabId();
   const supabase = createClient();
   const { error } = await supabase.from("lab_member_progress").upsert(
     {
-      lab_id: getActiveLabId(),
+      lab_id: activeLabId,
       user_id: userId,
       lab_tour_completed_at: completedAt,
       onboarding_completed_at: completedAt,
@@ -272,7 +278,10 @@ export async function completeOnboarding(userId: string) {
     { onConflict: "lab_id,user_id" },
   );
   if (error) throw error;
-  if (currentUserCache?.value.id === userId) {
+  if (
+    currentUserCache?.value.id === userId &&
+    currentUserCache.labId === activeLabId
+  ) {
     currentUserCache = {
       value: {
         ...currentUserCache.value,
@@ -280,7 +289,7 @@ export async function completeOnboarding(userId: string) {
         onboardingCompletedAt: completedAt,
       },
       expiresAt: Date.now() + USER_CACHE_MS,
-      labId: getActiveLabId(),
+      labId: activeLabId,
     };
   }
 }
@@ -299,7 +308,10 @@ export async function completeLabTour(userId: string) {
     { onConflict: "lab_id,user_id" },
   );
   if (error) throw error;
-  if (currentUserCache?.value.id === userId) {
+  if (
+    currentUserCache?.value.id === userId &&
+    currentUserCache.labId === activeLabId
+  ) {
     currentUserCache = {
       value: { ...currentUserCache.value, labTourCompletedAt: completedAt },
       expiresAt: Date.now() + USER_CACHE_MS,
@@ -310,12 +322,13 @@ export async function completeLabTour(userId: string) {
 
 export async function completeChapterTwo(userId: string) {
   const completedAt = new Date().toISOString();
+  const activeLabId = getActiveLabId();
   const supabase = createClient();
   const { error: progressError } = await supabase
     .from("lab_member_progress")
     .upsert(
       {
-        lab_id: getActiveLabId(),
+        lab_id: activeLabId,
         user_id: userId,
         chapter_two_completed_at: completedAt,
         updated_at: completedAt,
@@ -323,28 +336,34 @@ export async function completeChapterTwo(userId: string) {
       { onConflict: "lab_id,user_id" },
     );
   if (progressError) throw progressError;
-  const { error } = await supabase.auth.updateUser({
-    data: { labquest_chapter2_completed_at: completedAt },
-  });
-  if (error) throw error;
-  const { error: refreshError } = await supabase.auth.refreshSession();
-  if (refreshError) throw refreshError;
-  if (currentUserCache?.value.id === userId) {
+  if (isLegacyFeatureProgressLab(activeLabId, DEFAULT_OS_LAB_ID)) {
+    const { error } = await supabase.auth.updateUser({
+      data: { labquest_chapter2_completed_at: completedAt },
+    });
+    if (error) throw error;
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) throw refreshError;
+  }
+  if (
+    currentUserCache?.value.id === userId &&
+    currentUserCache.labId === activeLabId
+  ) {
     currentUserCache = {
       value: { ...currentUserCache.value, chapterTwoCompletedAt: completedAt },
       expiresAt: Date.now() + USER_CACHE_MS,
-      labId: getActiveLabId(),
+      labId: activeLabId,
     };
   }
 }
 export async function completeChapterThree(userId: string) {
   const completedAt = new Date().toISOString();
+  const activeLabId = getActiveLabId();
   const supabase = createClient();
   const { error: progressError } = await supabase
     .from("lab_member_progress")
     .upsert(
       {
-        lab_id: getActiveLabId(),
+        lab_id: activeLabId,
         user_id: userId,
         chapter_three_completed_at: completedAt,
         updated_at: completedAt,
@@ -352,20 +371,25 @@ export async function completeChapterThree(userId: string) {
       { onConflict: "lab_id,user_id" },
     );
   if (progressError) throw progressError;
-  const { error } = await supabase.auth.updateUser({
-    data: { labquest_chapter3_completed_at: completedAt },
-  });
-  if (error) throw error;
-  const { error: refreshError } = await supabase.auth.refreshSession();
-  if (refreshError) throw refreshError;
-  if (currentUserCache?.value.id === userId) {
+  if (isLegacyFeatureProgressLab(activeLabId, DEFAULT_OS_LAB_ID)) {
+    const { error } = await supabase.auth.updateUser({
+      data: { labquest_chapter3_completed_at: completedAt },
+    });
+    if (error) throw error;
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) throw refreshError;
+  }
+  if (
+    currentUserCache?.value.id === userId &&
+    currentUserCache.labId === activeLabId
+  ) {
     currentUserCache = {
       value: {
         ...currentUserCache.value,
         chapterThreeCompletedAt: completedAt,
       },
       expiresAt: Date.now() + USER_CACHE_MS,
-      labId: getActiveLabId(),
+      labId: activeLabId,
     };
   }
 }

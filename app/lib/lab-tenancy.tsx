@@ -10,9 +10,17 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "./supabase/client";
-import { ensureStarterQuest } from "./quest-admin";
+import { createStarterQuest } from "./quest-admin";
 import { normalizeLabAccent } from "./lab-branding";
+import {
+  DEFAULT_LAB_MAP_ASPECT_RATIO,
+  LAB_SEATS,
+  normalizeLabMapAspectRatio,
+  normalizeLabSeatLayout,
+  type LabSeatPosition,
+} from "./lab-map";
 import { shouldNavigateForLabSwitch } from "./lab-routing";
 
 export const DEFAULT_OS_LAB_ID = "11111111-1111-4111-8111-111111111111";
@@ -30,6 +38,8 @@ export type Lab = {
   ownerId: string | null;
   logoUrl: string | null;
   mapImageUrl: string;
+  mapAspectRatio: number;
+  mapSeatLayout: LabSeatPosition[];
   defaultLocale: "ko" | "vi" | "en";
   themeConfig: Record<string, string>;
   joinCode: string;
@@ -45,6 +55,8 @@ const OS_LAB_FALLBACK: Lab = {
   ownerId: null,
   logoUrl: null,
   mapImageUrl: "/lab-tour-room-v5.png",
+  mapAspectRatio: DEFAULT_LAB_MAP_ASPECT_RATIO,
+  mapSeatLayout: LAB_SEATS.map((seat) => ({ ...seat })),
   defaultLocale: "ko",
   themeConfig: {
     accent: "#ffd84d",
@@ -69,6 +81,8 @@ function mapLab(
     ownerId: typeof row.owner_id === "string" ? row.owner_id : null,
     logoUrl: typeof row.logo_url === "string" ? row.logo_url : null,
     mapImageUrl: String(row.map_image_url ?? "/lab-tour-room-v5.png"),
+    mapAspectRatio: normalizeLabMapAspectRatio(row.map_aspect_ratio),
+    mapSeatLayout: normalizeLabSeatLayout(row.map_seat_layout),
     defaultLocale: ["ko", "vi", "en"].includes(locale)
       ? (locale as Lab["defaultLocale"])
       : "ko",
@@ -171,7 +185,7 @@ async function fetchMyLabs(): Promise<{
   const { data: memberLabRows, error: memberLabsError } = await supabase
     .from("labs")
     .select(
-      "id,slug,name,description,owner_id,logo_url,map_image_url,default_locale,theme_config,join_code",
+      "id,slug,name,description,owner_id,logo_url,map_image_url,map_aspect_ratio,map_seat_layout,default_locale,theme_config,join_code",
     )
     .in("id", labIds)
     .order("created_at", { ascending: true });
@@ -181,7 +195,7 @@ async function fetchMyLabs(): Promise<{
     ? await supabase
         .from("labs")
         .select(
-          "id,slug,name,description,owner_id,logo_url,map_image_url,default_locale,theme_config,join_code",
+          "id,slug,name,description,owner_id,logo_url,map_image_url,map_aspect_ratio,map_seat_layout,default_locale,theme_config,join_code",
         )
         .order("created_at", { ascending: true })
     : { data: null, error: null };
@@ -242,6 +256,8 @@ type LabContextValue = {
       description: string;
       logoUrl: string;
       mapImageUrl: string;
+      mapAspectRatio: number;
+      mapSeatLayout: LabSeatPosition[];
       defaultLocale: "ko" | "vi" | "en";
       accent: string;
     },
@@ -251,6 +267,7 @@ type LabContextValue = {
 const LabContext = createContext<LabContextValue | null>(null);
 
 export function LabProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [labs, setLabs] = useState<Lab[]>([]);
   const [activeLab, setActiveLab] = useState<Lab>(OS_LAB_FALLBACK);
   const [isLoading, setIsLoading] = useState(true);
@@ -345,19 +362,35 @@ export function LabProvider({ children }: { children: ReactNode }) {
     };
   }, [refreshLabs]);
 
-  const switchLab = useCallback((lab: Lab, redirectTo = "/") => {
-    const switchEpoch = labSwitchEpochRef.current + 1;
-    labSwitchEpochRef.current = switchEpoch;
-    void import("./auth").then(({ clearAuthCache }) => {
-      if (switchEpoch !== labSwitchEpochRef.current) return;
-      clearAuthCache();
-      storeActiveLab(lab);
-      setActiveLab(lab);
-      if (shouldNavigateForLabSwitch(window.location.href, redirectTo)) {
-        window.location.assign(redirectTo);
-      }
+  const exposeLab = useCallback((lab: Lab) => {
+    storeActiveLab(lab);
+    setLabs((currentLabs) => {
+      const currentIndex = currentLabs.findIndex(
+        (currentLab) => currentLab.id === lab.id,
+      );
+      if (currentIndex === -1) return [...currentLabs, lab];
+      const nextLabs = [...currentLabs];
+      nextLabs[currentIndex] = lab;
+      return nextLabs;
     });
+    setActiveLab(lab);
   }, []);
+
+  const switchLab = useCallback(
+    (lab: Lab, redirectTo = "/") => {
+      const switchEpoch = labSwitchEpochRef.current + 1;
+      labSwitchEpochRef.current = switchEpoch;
+      void import("./auth").then(({ clearAuthCache }) => {
+        if (switchEpoch !== labSwitchEpochRef.current) return;
+        clearAuthCache();
+        exposeLab(lab);
+        if (shouldNavigateForLabSwitch(window.location.href, redirectTo)) {
+          router.push(redirectTo);
+        }
+      });
+    },
+    [exposeLab, router],
+  );
 
   const createLab = useCallback(
     async (input: {
@@ -377,14 +410,13 @@ export function LabProvider({ children }: { children: ReactNode }) {
       const created = mapLab(data as Record<string, unknown>, {
         membership_role: "owner",
       });
-      await ensureStarterQuest(created.id);
-      await refreshLabs();
-      const { clearAuthCache } = await import("./auth");
-      clearAuthCache();
-      storeActiveLab(created);
+      exposeLab(created);
+      const starterQuest = createStarterQuest(created.id);
+      void refreshLabs();
+      await starterQuest;
       return created;
     },
-    [refreshLabs],
+    [exposeLab, refreshLabs],
   );
 
   const joinLab = useCallback(
@@ -395,16 +427,14 @@ export function LabProvider({ children }: { children: ReactNode }) {
         { target_join_code: joinCode },
       );
       if (joinError) throw joinError;
-      await refreshLabs();
       const joined = mapLab(data as Record<string, unknown>, {
         membership_role: "member",
       });
-      const { clearAuthCache } = await import("./auth");
-      clearAuthCache();
-      storeActiveLab(joined);
+      exposeLab(joined);
+      void refreshLabs();
       return joined;
     },
-    [refreshLabs],
+    [exposeLab, refreshLabs],
   );
 
   const updateLab = useCallback(
@@ -415,6 +445,8 @@ export function LabProvider({ children }: { children: ReactNode }) {
         description: string;
         logoUrl: string;
         mapImageUrl: string;
+        mapAspectRatio: number;
+        mapSeatLayout: LabSeatPosition[];
         defaultLocale: "ko" | "vi" | "en";
         accent: string;
       },
@@ -430,6 +462,8 @@ export function LabProvider({ children }: { children: ReactNode }) {
           description: input.description.trim(),
           logo_url: input.logoUrl.trim() || null,
           map_image_url: input.mapImageUrl.trim() || "/lab-tour-room-v5.png",
+          map_aspect_ratio: normalizeLabMapAspectRatio(input.mapAspectRatio),
+          map_seat_layout: normalizeLabSeatLayout(input.mapSeatLayout),
           default_locale: input.defaultLocale,
           theme_config: {
             ...current.themeConfig,
@@ -439,7 +473,7 @@ export function LabProvider({ children }: { children: ReactNode }) {
         })
         .eq("id", labId)
         .select(
-          "id,slug,name,description,owner_id,logo_url,map_image_url,default_locale,theme_config,join_code",
+          "id,slug,name,description,owner_id,logo_url,map_image_url,map_aspect_ratio,map_seat_layout,default_locale,theme_config,join_code",
         )
         .single();
       if (updateError) throw updateError;

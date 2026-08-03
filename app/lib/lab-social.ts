@@ -173,6 +173,7 @@ export type LabNotification = {
   type:
     | "reaction"
     | "comment"
+    | "first_record_reminder"
     | "streak_reminder"
     | "mission_reminder"
     | "team_project_invite";
@@ -926,6 +927,10 @@ export async function createDailyPost(
     throw postError;
   }
   invalidatePostCaches(memberId);
+  if (kind !== "moment") {
+    notificationsCache.delete(memberId);
+    window.dispatchEvent(new Event("lab-notifications-changed"));
+  }
   const { data: publicImage } = supabase.storage
     .from("post-images")
     .getPublicUrl(data.image_path);
