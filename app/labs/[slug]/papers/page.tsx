@@ -10,7 +10,6 @@ import { createClient } from "../../../lib/supabase/client";
 import {
   createPaper,
   createPaperComment,
-  changePaperReadingStatus,
   deletePaper,
   deletePaperComment,
   EMPTY_PAPER_DRAFT,
@@ -21,7 +20,7 @@ import {
   paperFileError,
   paperReadingSummary,
   requestPaperQuestionSet,
-  savePaperProgress,
+  submitPaperQuiz,
   uploadPaperFile,
   type LabPaper,
   type PaperComment,
@@ -29,10 +28,9 @@ import {
   type PaperProgress,
   type PaperQuestionJob,
   type PaperQuestionSet,
-  type PaperStatus,
+  type PaperQuizScore,
+  type PaperQuizSubmission,
 } from "../../../lib/paper-club";
-
-type ProgressDraft = { status: PaperStatus; progress: number };
 
 export default function PaperClubPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -49,8 +47,8 @@ export default function PaperClubPage() {
   const [comments, setComments] = useState<PaperComment[]>([]);
   const [questionJobs, setQuestionJobs] = useState<PaperQuestionJob[]>([]);
   const [questionSets, setQuestionSets] = useState<PaperQuestionSet[]>([]);
+  const [quizScores, setQuizScores] = useState<PaperQuizScore[]>([]);
   const [viewerId, setViewerId] = useState("");
-  const [progressDrafts, setProgressDrafts] = useState<Record<string, ProgressDraft>>({});
   const [paperDraft, setPaperDraft] = useState<PaperDraft>(EMPTY_PAPER_DRAFT);
   const [paperFile, setPaperFile] = useState<File | null>(null);
   const [selectedPaperId, setSelectedPaperId] = useState("");
@@ -60,7 +58,6 @@ export default function PaperClubPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const dirtyProgressRef = useRef(new Set<string>());
   const discussionTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const refresh = useCallback(async (silent = false) => {
@@ -77,25 +74,9 @@ export default function PaperClubPage() {
       setComments(club.comments);
       setQuestionJobs(club.questionJobs);
       setQuestionSets(club.questionSets);
+      setQuizScores(club.quizScores);
       setError("");
       setViewerId(nextViewerId);
-      setProgressDrafts((current) => {
-        const next: Record<string, ProgressDraft> = {};
-        for (const paper of club.papers) {
-          if (dirtyProgressRef.current.has(paper.id) && current[paper.id]) {
-            next[paper.id] = current[paper.id];
-            continue;
-          }
-          const saved = club.progress.find(
-            (item) => item.paper_id === paper.id && item.user_id === nextViewerId,
-          );
-          next[paper.id] = {
-            status: saved?.status ?? "to-read",
-            progress: saved?.progress_percent ?? 0,
-          };
-        }
-        return next;
-      });
       setSelectedPaperId((current) => {
         if (current && club.papers.some((paper) => paper.id === current)) return current;
         const requested = new URLSearchParams(window.location.search).get("paper");
@@ -146,6 +127,30 @@ export default function PaperClubPage() {
       setNotice(success);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Action failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitQuiz(
+    paperId: string,
+    answers: number[],
+  ): Promise<PaperQuizSubmission> {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await submitPaperQuiz(paperId, answers);
+      await refresh(true);
+      setNotice(l(
+        "퀴즈 결과를 저장했습니다. 현재 점수: " + result.awarded_score + "/50",
+        "Đã lưu kết quả. Điểm hiện tại: " + result.awarded_score + "/50",
+        "Quiz saved. Current score: " + result.awarded_score + "/50",
+      ));
+      return result;
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not submit quiz.");
+      throw caught;
     } finally {
       setBusy(false);
     }
@@ -239,11 +244,13 @@ export default function PaperClubPage() {
         ) : (
           <section className="mt-8 grid gap-5 lg:grid-cols-2">
             {papers.map((paper) => {
-              const draft = progressDrafts[paper.id] ?? { status: "to-read" as const, progress: 0 };
               const paperProgress = progress.filter((item) => item.paper_id === paper.id);
               const completedCount = paperProgress.filter((item) => item.status === "completed").length;
               const questionJob = latestQuestionJob(questionJobs, paper.id);
               const questionSet = questionSets.find((item) => item.paper_id === paper.id);
+              const quizScore = quizScores.find(
+                (item) => item.paper_id === paper.id && item.user_id === viewerId,
+              );
               return (
                 <article key={paper.id} className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-black/[0.04]">
                   <div className="flex items-start justify-between gap-4">
@@ -260,24 +267,6 @@ export default function PaperClubPage() {
                   {paper.abstract && <p className="mt-4 line-clamp-3 text-sm font-medium leading-6 text-stone-500">{paper.abstract}</p>}
                   {paper.tags.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{paper.tags.map((tag) => <span key={tag} className="rounded-full bg-violet-50 px-3 py-1 text-xs font-black text-violet-600">#{tag}</span>)}</div>}
 
-                  <div className="mt-5 rounded-2xl bg-stone-100 p-4">
-                    <label className="flex cursor-pointer items-center gap-3 rounded-xl bg-white px-4 py-4 font-black">
-                      <input disabled={busy} type="checkbox" checked={draft.status === "completed"} onChange={(event) => {
-                      const normalized = changePaperReadingStatus(event.target.checked ? "completed" : "to-read", draft.progress);
-                      dirtyProgressRef.current.add(paper.id);
-                      setProgressDrafts((current) => ({ ...current, [paper.id]: { status: normalized.status, progress: normalized.progressPercent } }));
-                      }} className="h-5 w-5 shrink-0 accent-violet-600 disabled:opacity-40" />
-                      <span className="min-w-0">
-                        <span className="block text-sm">{l("완독으로 표시", "Đánh dấu đã đọc xong", "Mark as completed")}</span>
-                        <span className="mt-1 block text-xs font-medium text-stone-500">{l("읽기를 마쳤다면 체크하세요.", "Đánh dấu khi bạn đã đọc xong paper.", "Check this after you finish reading the paper.")}</span>
-                      </span>
-                    </label>
-                    <button type="button" disabled={busy || !viewerId} onClick={() => void run(async () => {
-                      await savePaperProgress(paper.id, viewerId, draft.status, draft.progress);
-                      dirtyProgressRef.current.delete(paper.id);
-                    }, l("읽기 표시를 저장했습니다.", "Đã lưu đánh dấu đọc.", "Reading mark saved."))} className="mt-3 w-full rounded-xl bg-stone-950 px-4 py-3 text-sm font-black text-white disabled:opacity-40">{l("표시 저장", "Lưu đánh dấu", "Save mark")}</button>
-                  </div>
-
                   <div className="mt-5 flex flex-wrap items-center gap-2">
                     <a href={paper.paper_url} target="_blank" rel="noreferrer" className="rounded-full bg-violet-600 px-4 py-2 text-sm font-black text-white">{l("페이퍼 열기 ↗", "Mở paper ↗", "Open paper ↗")}</a>
                     <button type="button" onClick={(event) => {
@@ -287,11 +276,12 @@ export default function PaperClubPage() {
                     <span className="ml-auto text-xs font-bold text-stone-400">✓ {completedCount}</span>
                   </div>
                   <PaperQuestionCard
-                    key={`quiz-${paper.id}-${questionSet?.generated_by_job_id ?? "pending"}`}
+                    key={`quiz-${paper.id}-${questionSet?.generated_by_job_id ?? questionSet?.updated_at ?? "pending"}`}
                     busy={busy}
                     canManage={canManage}
                     job={questionJob}
                     locale={locale}
+                    quizScore={quizScore}
                     questionSet={questionSet}
                     l={l}
                     onGenerate={() => void run(
@@ -302,6 +292,7 @@ export default function PaperClubPage() {
                         "AI question generation queued.",
                       ),
                     )}
+                    onSubmit={(answers) => submitQuiz(paper.id, answers)}
                   />
                 </article>
               );
@@ -343,23 +334,124 @@ export default function PaperClubPage() {
   );
 }
 
-function PaperQuestionCard({ busy, canManage, job, locale, questionSet, l, onGenerate }: {
+type QuizLayout = {
+  questionIds: string[];
+  optionIndexes: Record<string, number[]>;
+};
+
+function quizSeed(value: string) {
+  let seed = 2166136261;
+  for (const character of value) {
+    seed ^= character.charCodeAt(0);
+    seed = Math.imul(seed, 16777619);
+  }
+  return seed >>> 0;
+}
+
+function shuffledIndexes(length: number, seedValue: string) {
+  const values = Array.from({ length }, (_, index) => index);
+  let state = quizSeed(seedValue);
+  const random = () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+  for (let index = values.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [values[index], values[swapIndex]] = [values[swapIndex], values[index]];
+  }
+  return values;
+}
+
+function createQuizLayout(
+  questions: PaperQuestionSet["payload"]["questions"],
+  seed: string,
+): QuizLayout {
+  return {
+    questionIds: shuffledIndexes(questions.length, seed + ":questions").map(
+      (index) => questions[index].id,
+    ),
+    optionIndexes: Object.fromEntries(
+      questions.map((question) => [
+        question.id,
+        shuffledIndexes(question.options.length, seed + ":" + question.id),
+      ]),
+    ),
+  };
+}
+
+function PaperQuestionCard({ busy, canManage, job, locale, quizScore, questionSet, l, onGenerate, onSubmit }: {
   busy: boolean;
   canManage: boolean;
   job: PaperQuestionJob | undefined;
   locale: "ko" | "vi" | "en";
+  quizScore: PaperQuizScore | undefined;
   questionSet: PaperQuestionSet | undefined;
   l: (ko: string, vi: string, en: string) => string;
   onGenerate: () => void;
+  onSubmit: (answers: number[]) => Promise<PaperQuizSubmission>;
 }) {
+  const questions = useMemo(
+    () => questionSet?.payload.questions ?? [],
+    [questionSet],
+  );
+  const layoutSeed =
+    (questionSet?.generated_by_job_id ?? questionSet?.updated_at ?? "paper-quiz")
+    + ":" + (quizScore?.attempt_count ?? 0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [submission, setSubmission] = useState<PaperQuizSubmission | null>(null);
+  const [layout, setLayout] = useState<QuizLayout>(
+    () => createQuizLayout(questions, layoutSeed),
+  );
+  const layoutVersionRef = useRef(0);
   const active = job?.status === "queued" || job?.status === "processing";
-  const questions = questionSet?.payload.questions ?? [];
+  const questionById = new Map(questions.map((question) => [question.id, question]));
+  const visibleQuestions = layout.questionIds.flatMap((id) => {
+    const question = questionById.get(id);
+    return question ? [question] : [];
+  });
+  const answeredCount = Object.keys(answers).length;
   const generateLabel = questionSet
     ? l("질문 다시 만들기", "Tạo lại câu hỏi", "Regenerate questions")
     : job?.status === "failed"
       ? l("다시 시도", "Thử lại", "Try again")
       : l("AI 질문 만들기", "Tạo câu hỏi bằng AI", "Generate AI questions");
+
+  async function handleSubmit() {
+    if (answeredCount !== questions.length || submission) return;
+    const orderedAnswers = questions.map((question) => answers[question.id]);
+    const result = await onSubmit(orderedAnswers);
+    setSubmission(result);
+  }
+
+  function startAnotherAttempt() {
+    setAnswers({});
+    setSubmission(null);
+    layoutVersionRef.current += 1;
+    setLayout(createQuizLayout(
+      questions,
+      layoutSeed + ":" + layoutVersionRef.current,
+    ));
+  }
+
+  const attemptCount = quizScore?.attempt_count ?? 0;
+  const awardedScore = quizScore?.awarded_score ?? 0;
+  const attemptMessage = attemptCount === 0
+    ? l(
+      "첫 도전은 정답률만큼 최대 50점을 받아요.",
+      "Lần đầu nhận tối đa 50 điểm theo tỷ lệ trả lời đúng.",
+      "Your first attempt earns up to 50 points from your correct-answer rate.",
+    )
+    : attemptCount === 1
+      ? l(
+        "점수 향상 기회가 1번 남았어요. 두 번째 결과는 80%로 반영돼요.",
+        "Bạn còn 1 lần cải thiện điểm; kết quả lần hai được tính 80%.",
+        "One score-improvement attempt remains; the second result counts at 80%.",
+      )
+      : l(
+        "이제부터는 연습 모드이며 점수는 바뀌지 않아요.",
+        "Từ bây giờ là chế độ luyện tập và điểm sẽ không thay đổi.",
+        "Further attempts are practice-only and will not change your score.",
+      );
 
   return (
     <section aria-label={l("AI 질문", "Câu hỏi AI", "AI questions")} className="mt-5 rounded-2xl border border-violet-100 bg-violet-50/70 p-4">
@@ -400,14 +492,40 @@ function PaperQuestionCard({ busy, canManage, job, locale, questionSet, l, onGen
           <summary className="cursor-pointer font-black text-violet-700">
             {l("퀴즈 풀기", "Làm bộ câu hỏi", "Take the quiz")}
           </summary>
+          <div className="mt-4 grid gap-3 rounded-2xl bg-stone-950 p-4 text-white sm:grid-cols-[auto_1fr] sm:items-center">
+            <div className="rounded-xl bg-white/10 px-4 py-3 text-center">
+              <p className="text-[10px] font-black uppercase tracking-[.15em] text-white/50">
+                {l("현재 점수", "Điểm hiện tại", "Current score")}
+              </p>
+              <p className="mt-1 text-2xl font-black">{awardedScore}/50</p>
+            </div>
+            <div>
+              <p className="text-sm font-black">{attemptMessage}</p>
+              <p className="mt-1 text-xs font-medium text-white/60">
+                {awardedScore >= 35
+                  ? l(
+                    "35점 이상을 달성해 자동으로 완독 처리됐어요.",
+                    "Đã đạt ít nhất 35 điểm nên paper được tự động đánh dấu hoàn thành.",
+                    "The paper was completed automatically after reaching 35 points.",
+                  )
+                  : l(
+                    "35점 이상을 받으면 자동으로 완독 처리돼요.",
+                    "Đạt từ 35 điểm để paper tự động được đánh dấu hoàn thành.",
+                    "Reach 35 points to complete the paper automatically.",
+                  )}
+              </p>
+            </div>
+          </div>
           <p className="mt-3 text-sm font-medium leading-6 text-stone-600">
             {localizedQuestionText(questionSet.payload.summary, locale)}
           </p>
           <div className="mt-5 space-y-5">
-            {questions.map((question, questionIndex) => {
+            {visibleQuestions.map((question, questionIndex) => {
               const selected = answers[question.id];
-              const revealed = selected !== undefined;
+              const revealed = submission !== null;
               const correct = selected === question.answer_index;
+              const visibleOptionIndexes = layout.optionIndexes[question.id]
+                ?? question.options.map((_, index) => index);
               return (
                 <article key={question.id} className="rounded-2xl border border-stone-100 p-4">
                   <div className="flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-wide text-stone-400">
@@ -420,23 +538,27 @@ function PaperQuestionCard({ busy, canManage, job, locale, questionSet, l, onGen
                     {localizedQuestionText(question.question, locale)}
                   </h3>
                   <div className="mt-3 grid gap-2">
-                    {question.options.map((option, optionIndex) => {
+                    {visibleOptionIndexes.map((optionIndex, visibleIndex) => {
+                      const option = question.options[optionIndex];
                       const isSelected = selected === optionIndex;
                       const isCorrectOption = revealed && optionIndex === question.answer_index;
                       const optionClass = isCorrectOption
                         ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                        : isSelected
+                        : revealed && isSelected
                           ? "border-red-300 bg-red-50 text-red-800"
-                          : "border-stone-200 bg-white text-stone-700 hover:border-violet-300";
+                          : isSelected
+                            ? "border-violet-400 bg-violet-50 text-violet-800"
+                            : "border-stone-200 bg-white text-stone-700 hover:border-violet-300";
                       return (
                         <button
                           key={optionIndex}
                           type="button"
                           aria-pressed={isSelected}
+                          disabled={busy || revealed}
                           onClick={() => setAnswers((current) => ({ ...current, [question.id]: optionIndex }))}
-                          className={`rounded-xl border px-3 py-3 text-left text-sm font-bold transition ${optionClass}`}
+                          className={"rounded-xl border px-3 py-3 text-left text-sm font-bold transition disabled:cursor-default " + optionClass}
                         >
-                          {String.fromCharCode(65 + optionIndex)}. {localizedQuestionText(option, locale)}
+                          {String.fromCharCode(65 + visibleIndex)}. {localizedQuestionText(option, locale)}
                         </button>
                       );
                     })}
@@ -457,6 +579,55 @@ function PaperQuestionCard({ busy, canManage, job, locale, questionSet, l, onGen
               );
             })}
           </div>
+          {submission ? (
+            <div role="status" className="mt-5 rounded-2xl bg-violet-100 p-4 text-violet-950">
+              <p className="text-lg font-black">
+                {l("결과", "Kết quả", "Result")}: {submission.correct_count}/{submission.question_count}
+                {" · "}{submission.raw_score}/50
+              </p>
+              <p className="mt-1 text-sm font-bold">
+                {submission.is_scored_attempt
+                  ? l(
+                    "반영된 페이퍼 점수",
+                    "Điểm paper được ghi nhận",
+                    "Credited paper score",
+                  ) + ": " + submission.awarded_score + "/50"
+                  : l(
+                    "연습 결과이며 기존 점수는 그대로예요.",
+                    "Đây là kết quả luyện tập; điểm hiện tại không thay đổi.",
+                    "This was practice; your credited score did not change.",
+                  )}
+              </p>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={startAnotherAttempt}
+                className="mt-3 rounded-full bg-stone-950 px-4 py-2 text-sm font-black text-white disabled:opacity-40"
+              >
+                {submission.attempt_number === 1
+                  ? l("점수 향상 도전", "Làm lần cải thiện điểm", "Take improvement attempt")
+                  : l("다시 연습", "Luyện tập lại", "Practice again")}
+              </button>
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl bg-stone-100 p-4">
+              <p className="text-xs font-bold text-stone-500">
+                {l("답변 완료", "Đã trả lời", "Answered")}: {answeredCount}/{questions.length}
+              </p>
+              <button
+                type="button"
+                disabled={busy || answeredCount !== questions.length}
+                onClick={() => void handleSubmit().catch(() => undefined)}
+                className="mt-2 w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {attemptCount === 0
+                  ? l("첫 번째 답안 제출", "Nộp lần đầu", "Submit first attempt")
+                  : attemptCount === 1
+                    ? l("점수 향상 답안 제출 (80%)", "Nộp lần cải thiện (80%)", "Submit improvement attempt (80%)")
+                    : l("연습 답안 제출", "Nộp bài luyện tập", "Submit practice")}
+              </button>
+            </div>
+          )}
         </details>
       )}
 

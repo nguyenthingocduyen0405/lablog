@@ -83,6 +83,30 @@ export type PaperQuestionSet = {
   updated_at: string;
 };
 
+export type PaperQuizScore = {
+  paper_id: string;
+  user_id: string;
+  attempt_count: number;
+  first_score: number;
+  second_score: number | null;
+  awarded_score: number;
+  best_correct_count: number;
+  last_correct_count: number;
+  last_question_count: number;
+  updated_at: string;
+};
+
+export type PaperQuizSubmission = {
+  attempt_number: number;
+  correct_count: number;
+  question_count: number;
+  raw_score: number;
+  awarded_score: number;
+  score_changed: boolean;
+  is_completed: boolean;
+  is_scored_attempt: boolean;
+};
+
 export type PaperDraft = {
   title: string;
   authors: string;
@@ -225,10 +249,11 @@ export async function loadPaperClub(labId: string) {
       comments: [] as PaperComment[],
       questionJobs: [] as PaperQuestionJob[],
       questionSets: [] as PaperQuestionSet[],
+      quizScores: [] as PaperQuizScore[],
     };
   }
   const paperIds = papers.map((paper) => paper.id);
-  const [progressResult, commentsResult, jobsResult, setsResult] = await Promise.all([
+  const [progressResult, commentsResult, jobsResult, setsResult, scoresResult] = await Promise.all([
     supabase
       .from("paper_progress")
       .select("paper_id,user_id,status,progress_percent,updated_at")
@@ -247,11 +272,16 @@ export async function loadPaperClub(labId: string) {
       .from("paper_question_sets")
       .select("paper_id,generated_by_job_id,model,payload,created_at,updated_at")
       .in("paper_id", paperIds),
+    supabase
+      .from("paper_quiz_scores")
+      .select("paper_id,user_id,attempt_count,first_score,second_score,awarded_score,best_correct_count,last_correct_count,last_question_count,updated_at")
+      .in("paper_id", paperIds),
   ]);
   if (progressResult.error) throw progressResult.error;
   if (commentsResult.error) throw commentsResult.error;
   if (jobsResult.error) throw jobsResult.error;
   if (setsResult.error) throw setsResult.error;
+  if (scoresResult.error) throw scoresResult.error;
 
   const rawComments = (commentsResult.data ?? []) as Omit<
     PaperComment,
@@ -280,6 +310,7 @@ export async function loadPaperClub(labId: string) {
     })),
     questionJobs: (jobsResult.data ?? []) as PaperQuestionJob[],
     questionSets: (setsResult.data ?? []) as PaperQuestionSet[],
+    quizScores: (scoresResult.data ?? []) as PaperQuizScore[],
   };
 }
 
@@ -393,4 +424,33 @@ export async function requestPaperQuestionSet(
     throw new Error("Question generation is already queued for this paper.");
   }
   if (result.error) throw result.error;
+}
+
+export async function submitPaperQuiz(
+  paperId: string,
+  answers: number[],
+) {
+  const supabase = createClient();
+  const result = await supabase
+    .rpc("submit_paper_quiz", {
+      target_paper_id: paperId,
+      submitted_answers: answers,
+    })
+    .single();
+  if (result.error) throw result.error;
+  return result.data as PaperQuizSubmission;
+}
+
+export async function loadPaperQuizRewardTotal(
+  userId: string,
+  labId: string,
+) {
+  const supabase = createClient();
+  const result = await supabase.rpc("get_paper_quiz_reward_total", {
+    target_user_id: userId,
+    target_lab_id: labId,
+  });
+  if (result.error && ["PGRST202", "42883"].includes(result.error.code)) return 0;
+  if (result.error) throw result.error;
+  return Number(result.data ?? 0);
 }

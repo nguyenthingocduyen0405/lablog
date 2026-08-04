@@ -84,6 +84,22 @@ const paperAiSingleLanguageMigration = readFileSync(
   "utf8",
 );
 
+const paperQuizScoringMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260820000000_paper_quiz_scoring.sql",
+  ),
+  "utf8",
+);
+
+const paperProgressCompatibilityMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260822000000_paper_progress_branch_compatibility.sql",
+  ),
+  "utf8",
+);
+
 const paperAiWorker = readFileSync(
   resolve(process.cwd(), "workers/paper-question-worker/worker.py"),
   "utf8",
@@ -210,6 +226,42 @@ test("Paper AI queue stores and validates the requested interface locale", () =>
   expect(paperAiSingleLanguageMigration).toContain(
     "grant select (generation_locale)",
   );
+});
+
+test("Paper Quiz scores retries server-side and completes at 35 points", () => {
+  expect(paperQuizScoringMigration).toContain(
+    "create table if not exists public.paper_quiz_scores",
+  );
+  expect(paperQuizScoringMigration).toContain("public.submit_paper_quiz");
+  expect(paperQuizScoringMigration).toContain(
+    "calculated_score * 0.8",
+  );
+  expect(paperQuizScoringMigration).toContain(
+    "next_awarded := prior_awarded",
+  );
+  expect(paperQuizScoringMigration).toContain("next_awarded >= 35");
+  expect(paperQuizScoringMigration).toContain(
+    "jsonb_array_length(submitted_answers)",
+  );
+  expect(paperQuizScoringMigration).toContain(
+    "public.get_paper_quiz_reward_total",
+  );
+  expect(paperQuizScoringMigration).toContain(
+    "public.is_lab_member(target_lab_id, target_user_id)",
+  );
+  expect(paperProgressCompatibilityMigration).toContain(
+    'create policy "Members can create their paper progress"',
+  );
+  expect(paperProgressCompatibilityMigration).toContain(
+    'create policy "Members can update their paper progress"',
+  );
+  const memberProfile = readFileSync(
+    resolve(process.cwd(), "app/members/[id]/page.tsx"),
+    "utf8",
+  );
+  expect(memberProfile).toContain("loadPaperQuizRewardTotal");
+  expect(memberProfile).toContain("teamProjectScore +");
+  expect(memberProfile).toContain("paperQuizScore");
 });
 
 test("Paper AI worker heartbeats long local generations", () => {
@@ -453,10 +505,15 @@ test("Quest Studio exposes ordering, JSON bundles, and Paper Club linking", () =
     "utf8",
   );
   expect(paperClub).toContain("scrollIntoView");
-  expect(paperClub).toContain("changePaperReadingStatus");
-  expect(paperClub).toContain('type="checkbox"');
+  expect(paperClub).not.toContain("changePaperReadingStatus");
   expect(paperClub).not.toContain('type="range"');
-  expect(paperClub).toContain("Mark as completed");
+  expect(paperClub).not.toContain("Mark as completed");
+  expect(paperClub).toContain("submitPaperQuiz");
+  expect(paperClub).toContain("Submit first attempt");
+  expect(paperClub).toContain("Submit improvement attempt (80%)");
+  expect(paperClub).toContain("Submit practice");
+  expect(paperClub).toContain("Reach 35 points to complete the paper automatically.");
+  expect(paperClub).toContain("createQuizLayout");
   expect(paperClub).toContain('accept="application/pdf,.pdf"');
   expect(paperClub).toContain("uploadPaperFile");
   expect(paperClub).toContain("requestPaperQuestionSet");

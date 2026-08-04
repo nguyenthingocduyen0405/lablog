@@ -13,6 +13,7 @@ import { getCurrentUser, logoutAccount, type AuthUser } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
 import { labQuestHref, labTourHref } from "../../lib/lab-routing";
 import { useLab } from "../../lib/lab-tenancy";
+import { loadPaperQuizRewardTotal } from "../../lib/paper-club";
 import {
   calculateCurrentStreak,
   getMemberAvailability,
@@ -35,6 +36,7 @@ export default function MemberProfilePage() {
   const [members, setMembers] = useState<LabMember[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [teamProjectScore, setTeamProjectScore] = useState(0);
+  const [paperQuizScore, setPaperQuizScore] = useState(0);
   const member = members.find((item) => item.id === id);
 
   useEffect(() => {
@@ -58,11 +60,13 @@ export default function MemberProfilePage() {
           loadedPosts,
           loadedCalendarEvents,
           loadedTeamProjectScore,
+          loadedPaperQuizScore,
         ] = await Promise.all([
           loadLabMembers(),
           loadDailyPosts(),
           loadCalendarEvents().catch(() => []),
           loadTeamProjectRewardTotal(id).catch(() => 0),
+          loadPaperQuizRewardTotal(id, activeLab.id).catch(() => 0),
         ]);
         if (cancelled) return;
         setCurrentUser(user);
@@ -70,12 +74,13 @@ export default function MemberProfilePage() {
         setLocalPosts(loadedPosts);
         setCalendarEvents(loadedCalendarEvents);
         setTeamProjectScore(loadedTeamProjectScore);
+        setPaperQuizScore(loadedPaperQuizScore);
       })
       .catch(() => router.replace("/login"));
     return () => {
       cancelled = true;
     };
-  }, [activeLab.slug, id, router]);
+  }, [activeLab.id, activeLab.slug, id, router]);
 
   const memberPosts = useMemo(
     () =>
@@ -91,8 +96,9 @@ export default function MemberProfilePage() {
   const totalScore = useMemo(
     () =>
       memberPosts.reduce((sum, post) => sum + post.scoreAwarded, 0) +
-      teamProjectScore,
-    [memberPosts, teamProjectScore],
+      teamProjectScore +
+      paperQuizScore,
+    [memberPosts, paperQuizScore, teamProjectScore],
   );
 
   if (!currentUser) {
