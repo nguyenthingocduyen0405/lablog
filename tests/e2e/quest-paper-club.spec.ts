@@ -76,6 +76,14 @@ const paperAiHeartbeatMigration = readFileSync(
   "utf8",
 );
 
+const paperAiSingleLanguageMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260819000000_paper_ai_single_language.sql",
+  ),
+  "utf8",
+);
+
 const paperAiWorker = readFileSync(
   resolve(process.cwd(), "workers/paper-question-worker/worker.py"),
   "utf8",
@@ -85,6 +93,14 @@ const ollamaServiceLimits = readFileSync(
   resolve(
     process.cwd(),
     "workers/paper-question-worker/ollama-lablog.conf",
+  ),
+  "utf8",
+);
+
+const paperAiWorkerService = readFileSync(
+  resolve(
+    process.cwd(),
+    "workers/paper-question-worker/lablog-paper-ai.service",
   ),
   "utf8",
 );
@@ -144,13 +160,19 @@ test("Paper AI migration protects jobs and exposes worker-only atomic RPCs", () 
   expect(paperAiMigration).toContain("to service_role");
 });
 
-test("JCloud worker runs a local structured multilingual model", () => {
+test("JCloud worker generates one structured locale per request", () => {
   expect(paperAiWorker).toContain("/api/generate");
-  expect(paperAiWorker).toContain("PaperQuestionBatchWithSummary");
-  expect(paperAiWorker).toContain("schema_model.model_json_schema");
-  expect(paperAiWorker).toContain("schema_model.model_validate_json");
-  expect(paperAiWorker).toContain("batch_number == 1");
-  expect(paperAiWorker).toContain("first_batch.questions + second_batch.questions");
+  expect(paperAiWorker).toContain("SingleLanguageQuestionSet");
+  expect(paperAiWorker).toContain(
+    "SingleLanguageQuestionSet.model_json_schema()",
+  );
+  expect(paperAiWorker).toContain(
+    "SingleLanguageQuestionSet.model_validate_json",
+  );
+  expect(paperAiWorker).toContain('"ko": "natural Korean"');
+  expect(paperAiWorker).toContain('"vi": "natural Vietnamese"');
+  expect(paperAiWorker).toContain('"en": "natural English"');
+  expect(paperAiWorker).toContain("localized[generation_locale]");
   expect(paperAiWorker).toContain('body.get("done_reason") == "length"');
   expect(paperAiWorker).toContain('"5m"');
   expect(paperAiWorker).toContain("ollama.unload(model)");
@@ -174,6 +196,20 @@ test("JCloud worker runs a local structured multilingual model", () => {
   expect(ollamaServiceLimits).toContain('OLLAMA_MAX_LOADED_MODELS=1');
   expect(ollamaServiceLimits).toContain('OLLAMA_KEEP_ALIVE=0');
   expect(ollamaServiceLimits).toContain("MemoryMax=5500M");
+  expect(paperAiWorkerService).toContain("TimeoutStopSec=30min");
+});
+
+test("Paper AI queue stores and validates the requested interface locale", () => {
+  expect(paperAiSingleLanguageMigration).toContain(
+    "generation_locale text not null default 'ko'",
+  );
+  expect(paperAiSingleLanguageMigration).toContain(
+    "generation_locale in ('ko', 'vi', 'en')",
+  );
+  expect(paperAiSingleLanguageMigration).toContain("job.generation_locale");
+  expect(paperAiSingleLanguageMigration).toContain(
+    "grant select (generation_locale)",
+  );
 });
 
 test("Paper AI worker heartbeats long local generations", () => {
@@ -424,6 +460,10 @@ test("Quest Studio exposes ordering, JSON bundles, and Paper Club linking", () =
   expect(paperClub).toContain('accept="application/pdf,.pdf"');
   expect(paperClub).toContain("uploadPaperFile");
   expect(paperClub).toContain("requestPaperQuestionSet");
+  expect(paperClub).toContain(
+    "requestPaperQuestionSet(paper.id, viewerId, locale)",
+  );
+  expect(paperClub).toContain("generated in your current language");
   expect(paperClub).toContain("PaperQuestionCard");
   expect(paperClub).toContain("AI PAPER QUIZ");
   expect(paperClub).toContain("aria-pressed");

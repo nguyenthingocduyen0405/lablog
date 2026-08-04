@@ -295,7 +295,7 @@ export default function PaperClubPage() {
                     questionSet={questionSet}
                     l={l}
                     onGenerate={() => void run(
-                      () => requestPaperQuestionSet(paper.id, viewerId),
+                      () => requestPaperQuestionSet(paper.id, viewerId, locale),
                       l(
                         "AI 질문 생성을 요청했습니다.",
                         "Đã xếp hàng tạo câu hỏi AI.",
@@ -369,9 +369,9 @@ function PaperQuestionCard({ busy, canManage, job, locale, questionSet, l, onGen
           <p className="mt-1 text-sm font-bold text-stone-600">
             {questions.length > 0
               ? l(
-                `${questions.length}개의 질문 · 한국어 / Tiếng Việt / English`,
-                `${questions.length} câu hỏi · 한국어 / Tiếng Việt / English`,
-                `${questions.length} questions · 한국어 / Tiếng Việt / English`,
+                `${questions.length}개의 질문 · 현재 언어로 생성`,
+                `${questions.length} câu hỏi · tạo bằng ngôn ngữ hiện tại`,
+                `${questions.length} questions · generated in your current language`,
               )
               : l(
                 "논문 내용을 바탕으로 학습 질문을 만들어요.",

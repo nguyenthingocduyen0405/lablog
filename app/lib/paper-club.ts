@@ -65,6 +65,7 @@ export type PaperQuestionJob = {
   id: string;
   paper_id: string;
   requested_by: string;
+  generation_locale: "ko" | "vi" | "en";
   status: PaperQuestionJobStatus;
   attempt_count: number;
   model: string | null;
@@ -239,7 +240,7 @@ export async function loadPaperClub(labId: string) {
       .order("created_at", { ascending: true }),
     supabase
       .from("paper_question_jobs")
-      .select("id,paper_id,requested_by,status,attempt_count,model,created_at,started_at,completed_at")
+      .select("id,paper_id,requested_by,generation_locale,status,attempt_count,model,created_at,started_at,completed_at")
       .in("paper_id", paperIds)
       .order("created_at", { ascending: false }),
     supabase
@@ -380,11 +381,13 @@ export async function deletePaperComment(commentId: string) {
 export async function requestPaperQuestionSet(
   paperId: string,
   userId: string,
+  locale: "ko" | "vi" | "en",
 ) {
   const supabase = createClient();
   const result = await supabase.from("paper_question_jobs").insert({
     paper_id: paperId,
     requested_by: userId,
+    generation_locale: locale,
   });
   if (result.error?.code === "23505") {
     throw new Error("Question generation is already queued for this paper.");

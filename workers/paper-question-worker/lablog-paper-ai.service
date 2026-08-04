@@ -13,6 +13,7 @@ EnvironmentFile=/etc/lablog-paper-ai.env
 ExecStart=/opt/lablog-paper-ai/.venv/bin/python /opt/lablog-paper-ai/worker.py
 Restart=always
 RestartSec=10
+TimeoutStopSec=30min
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
