@@ -1,0 +1,25 @@
+[Unit]
+Description=LabLog paper question AI worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lablog-ai
+Group=lablog-ai
+WorkingDirectory=/opt/lablog-paper-ai
+EnvironmentFile=/etc/lablog-paper-ai.env
+ExecStart=/opt/lablog-paper-ai/.venv/bin/python /opt/lablog-paper-ai/worker.py
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

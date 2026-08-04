@@ -11,6 +11,8 @@ import {
 } from "../../app/lib/quest-admin";
 import {
   changePaperReadingStatus,
+  latestQuestionJob,
+  localizedQuestionText,
   normalizePaperProgress,
   paperDraftError,
   paperDraftPayload,
@@ -18,6 +20,7 @@ import {
   paperReadingSummary,
   type LabPaper,
   type PaperProgress,
+  type PaperQuestionJob,
 } from "../../app/lib/paper-club";
 
 const migration = readFileSync(
@@ -38,6 +41,35 @@ const osQuestMigration = readFileSync(
     process.cwd(),
     "supabase/migrations/20260807000000_os_lab_quest_catalog.sql",
   ),
+  "utf8",
+);
+
+const paperAiMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260815000000_paper_ai_question_sets.sql",
+  ),
+  "utf8",
+);
+
+const paperAiHardeningMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260816000000_paper_ai_queue_hardening.sql",
+  ),
+  "utf8",
+);
+
+const paperAiPrivacyMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260817000000_paper_ai_error_privacy.sql",
+  ),
+  "utf8",
+);
+
+const paperAiWorker = readFileSync(
+  resolve(process.cwd(), "workers/paper-question-worker/worker.py"),
   "utf8",
 );
 
@@ -67,6 +99,72 @@ test("Paper PDF storage restricts uploads to lab admins and 20 MB", () => {
   expect(storageMigration).toContain(
     'drop policy if exists "Paper files are publicly readable"',
   );
+});
+
+test("Paper AI migration protects jobs and exposes worker-only atomic RPCs", () => {
+  expect(paperAiMigration).toContain(
+    "create table if not exists public.paper_question_jobs",
+  );
+  expect(paperAiMigration).toContain(
+    "create table if not exists public.paper_question_sets",
+  );
+  expect(paperAiMigration).toContain(
+    "paper_question_jobs_one_active_per_paper_idx",
+  );
+  expect(paperAiMigration).toContain(
+    'where status in (\'queued\', \'processing\')',
+  );
+  expect(paperAiMigration).toContain(
+    'create policy "Lab admins can request paper questions"',
+  );
+  expect(paperAiMigration).toContain("requested_by = (select auth.uid())");
+  expect(paperAiMigration).toContain("for update skip locked");
+  expect(paperAiMigration).toContain(
+    "public.complete_paper_question_job",
+  );
+  expect(paperAiMigration).toContain(
+    "grant execute on function public.claim_paper_question_job(text)",
+  );
+  expect(paperAiMigration).toContain("to service_role");
+});
+
+test("JCloud worker uses PDF file input and validates structured multilingual questions", () => {
+  expect(paperAiWorker).toContain("client.responses.parse");
+  expect(paperAiWorker).toContain('"type": "input_file"');
+  expect(paperAiWorker).toContain("text_format=PaperQuestionSet");
+  expect(paperAiWorker).toContain("store=False");
+  expect(paperAiWorker).toContain("difficulty_counts");
+  expect(paperAiWorker).toContain("complete_paper_question_job");
+  expect(paperAiWorker).toContain("fail_paper_question_job");
+});
+
+test("Paper AI queue releases stale jobs after the final attempt", () => {
+  expect(paperAiHardeningMigration).toContain("exhausted.attempt_count >= 10");
+  expect(paperAiHardeningMigration).toContain("status = 'failed'");
+  expect(paperAiHardeningMigration).toContain(
+    "Generation stopped after the maximum number of attempts.",
+  );
+  expect(paperAiHardeningMigration).toContain("for update skip locked");
+});
+
+test("Paper AI provider errors stay hidden from lab members", () => {
+  expect(paperAiPrivacyMigration).toContain(
+    "revoke select on public.paper_question_jobs from authenticated",
+  );
+  expect(paperAiPrivacyMigration).toContain("grant select (");
+  expect(paperAiPrivacyMigration).not.toContain("error_message,");
+});
+
+test("Paper questions localize with fallback and use the latest job per paper", () => {
+  const text = { ko: "", vi: "Bản dịch", en: "Translation" };
+  expect(localizedQuestionText(text, "vi")).toBe("Bản dịch");
+  expect(localizedQuestionText(text, "ko")).toBe("Translation");
+  const jobs = [
+    { id: "new", paper_id: "paper-1" },
+    { id: "old", paper_id: "paper-1" },
+  ] as PaperQuestionJob[];
+  expect(latestQuestionJob(jobs, "paper-1")?.id).toBe("new");
+  expect(latestQuestionJob(jobs, "missing")).toBeUndefined();
 });
 
 test("OS Lab catalog migration seeds 12 specialized games with protected progress", () => {
@@ -275,6 +373,13 @@ test("Quest Studio exposes ordering, JSON bundles, and Paper Club linking", () =
   expect(paperClub).toContain("Mark as completed");
   expect(paperClub).toContain('accept="application/pdf,.pdf"');
   expect(paperClub).toContain("uploadPaperFile");
+  expect(paperClub).toContain("requestPaperQuestionSet");
+  expect(paperClub).toContain("PaperQuestionCard");
+  expect(paperClub).toContain("AI PAPER QUIZ");
+  expect(paperClub).toContain("aria-pressed");
+  expect(paperClub).toContain("AI is working");
+  expect(paperClub).toContain("questionSet?.generated_by_job_id");
+  expect(paperClub).not.toContain("job.error_message");
   expect(paperClub).not.toContain('<Field label="URL *"');
 });
 

@@ -14,16 +14,21 @@ import {
   deletePaper,
   deletePaperComment,
   EMPTY_PAPER_DRAFT,
+  latestQuestionJob,
   loadPaperClub,
+  localizedQuestionText,
   paperDraftError,
   paperFileError,
   paperReadingSummary,
+  requestPaperQuestionSet,
   savePaperProgress,
   uploadPaperFile,
   type LabPaper,
   type PaperComment,
   type PaperDraft,
   type PaperProgress,
+  type PaperQuestionJob,
+  type PaperQuestionSet,
   type PaperStatus,
 } from "../../../lib/paper-club";
 
@@ -42,6 +47,8 @@ export default function PaperClubPage() {
   const [papers, setPapers] = useState<LabPaper[]>([]);
   const [progress, setProgress] = useState<PaperProgress[]>([]);
   const [comments, setComments] = useState<PaperComment[]>([]);
+  const [questionJobs, setQuestionJobs] = useState<PaperQuestionJob[]>([]);
+  const [questionSets, setQuestionSets] = useState<PaperQuestionSet[]>([]);
   const [viewerId, setViewerId] = useState("");
   const [progressDrafts, setProgressDrafts] = useState<Record<string, ProgressDraft>>({});
   const [paperDraft, setPaperDraft] = useState<PaperDraft>(EMPTY_PAPER_DRAFT);
@@ -56,9 +63,9 @@ export default function PaperClubPage() {
   const dirtyProgressRef = useRef(new Set<string>());
   const discussionTriggerRef = useRef<HTMLButtonElement | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (silent = false) => {
     if (!lab) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const [club, auth] = await Promise.all([
         loadPaperClub(lab.id),
@@ -68,6 +75,9 @@ export default function PaperClubPage() {
       setPapers(club.papers);
       setProgress(club.progress);
       setComments(club.comments);
+      setQuestionJobs(club.questionJobs);
+      setQuestionSets(club.questionSets);
+      setError("");
       setViewerId(nextViewerId);
       setProgressDrafts((current) => {
         const next: Record<string, ProgressDraft> = {};
@@ -97,7 +107,7 @@ export default function PaperClubPage() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not load Paper Club.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [lab]);
 
@@ -107,6 +117,14 @@ export default function PaperClubPage() {
     const timeoutId = window.setTimeout(() => void refresh(), 0);
     return () => window.clearTimeout(timeoutId);
   }, [isLoading, lab, refresh, router]);
+
+  useEffect(() => {
+    if (!questionJobs.some((job) => job.status === "queued" || job.status === "processing")) {
+      return;
+    }
+    const intervalId = window.setInterval(() => void refresh(true), 4_000);
+    return () => window.clearInterval(intervalId);
+  }, [questionJobs, refresh]);
 
   useEffect(() => {
     if (!selectedPaperId || loading) return;
@@ -124,7 +142,7 @@ export default function PaperClubPage() {
     setNotice("");
     try {
       await work();
-      await refresh();
+      await refresh(true);
       setNotice(success);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Action failed.");
@@ -224,6 +242,8 @@ export default function PaperClubPage() {
               const draft = progressDrafts[paper.id] ?? { status: "to-read" as const, progress: 0 };
               const paperProgress = progress.filter((item) => item.paper_id === paper.id);
               const completedCount = paperProgress.filter((item) => item.status === "completed").length;
+              const questionJob = latestQuestionJob(questionJobs, paper.id);
+              const questionSet = questionSets.find((item) => item.paper_id === paper.id);
               return (
                 <article key={paper.id} className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-black/[0.04]">
                   <div className="flex items-start justify-between gap-4">
@@ -266,6 +286,23 @@ export default function PaperClubPage() {
                     }} className="rounded-full bg-stone-100 px-4 py-2 text-sm font-black">{l("토론", "Thảo luận", "Discussion")} ({comments.filter((comment) => comment.paper_id === paper.id).length})</button>
                     <span className="ml-auto text-xs font-bold text-stone-400">✓ {completedCount}</span>
                   </div>
+                  <PaperQuestionCard
+                    key={`quiz-${paper.id}-${questionSet?.generated_by_job_id ?? "pending"}`}
+                    busy={busy}
+                    canManage={canManage}
+                    job={questionJob}
+                    locale={locale}
+                    questionSet={questionSet}
+                    l={l}
+                    onGenerate={() => void run(
+                      () => requestPaperQuestionSet(paper.id, viewerId),
+                      l(
+                        "AI 질문 생성을 요청했습니다.",
+                        "Đã xếp hàng tạo câu hỏi AI.",
+                        "AI question generation queued.",
+                      ),
+                    )}
+                  />
                 </article>
               );
             })}
@@ -303,6 +340,137 @@ export default function PaperClubPage() {
         )}
       </div>
     </main>
+  );
+}
+
+function PaperQuestionCard({ busy, canManage, job, locale, questionSet, l, onGenerate }: {
+  busy: boolean;
+  canManage: boolean;
+  job: PaperQuestionJob | undefined;
+  locale: "ko" | "vi" | "en";
+  questionSet: PaperQuestionSet | undefined;
+  l: (ko: string, vi: string, en: string) => string;
+  onGenerate: () => void;
+}) {
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const active = job?.status === "queued" || job?.status === "processing";
+  const questions = questionSet?.payload.questions ?? [];
+  const generateLabel = questionSet
+    ? l("질문 다시 만들기", "Tạo lại câu hỏi", "Regenerate questions")
+    : job?.status === "failed"
+      ? l("다시 시도", "Thử lại", "Try again")
+      : l("AI 질문 만들기", "Tạo câu hỏi bằng AI", "Generate AI questions");
+
+  return (
+    <section aria-label={l("AI 질문", "Câu hỏi AI", "AI questions")} className="mt-5 rounded-2xl border border-violet-100 bg-violet-50/70 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[.15em] text-violet-600">AI PAPER QUIZ</p>
+          <p className="mt-1 text-sm font-bold text-stone-600">
+            {questions.length > 0
+              ? l(
+                `${questions.length}개의 질문 · 한국어 / Tiếng Việt / English`,
+                `${questions.length} câu hỏi · 한국어 / Tiếng Việt / English`,
+                `${questions.length} questions · 한국어 / Tiếng Việt / English`,
+              )
+              : l(
+                "논문 내용을 바탕으로 학습 질문을 만들어요.",
+                "Tạo bộ câu hỏi học tập dựa trên nội dung paper.",
+                "Create a study quiz grounded in this paper.",
+              )}
+          </p>
+        </div>
+        {active && (
+          <span role="status" className="rounded-full bg-amber-100 px-3 py-2 text-xs font-black text-amber-700">
+            {job?.status === "queued"
+              ? l("대기 중", "Đang chờ", "Queued")
+              : l("PDF 분석 중", "Đang phân tích PDF", "Analyzing PDF")}
+          </span>
+        )}
+      </div>
+
+      {job?.status === "failed" && (
+        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-700">
+          {l("생성에 실패했습니다.", "Không thể tạo câu hỏi.", "Question generation failed.")}
+        </p>
+      )}
+
+      {questionSet && (
+        <details className="mt-4 rounded-xl bg-white p-4 shadow-sm">
+          <summary className="cursor-pointer font-black text-violet-700">
+            {l("퀴즈 풀기", "Làm bộ câu hỏi", "Take the quiz")}
+          </summary>
+          <p className="mt-3 text-sm font-medium leading-6 text-stone-600">
+            {localizedQuestionText(questionSet.payload.summary, locale)}
+          </p>
+          <div className="mt-5 space-y-5">
+            {questions.map((question, questionIndex) => {
+              const selected = answers[question.id];
+              const revealed = selected !== undefined;
+              const correct = selected === question.answer_index;
+              return (
+                <article key={question.id} className="rounded-2xl border border-stone-100 p-4">
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-wide text-stone-400">
+                    <span>{questionIndex + 1}/{questions.length}</span>
+                    <span>·</span>
+                    <span>{question.difficulty}</span>
+                    {question.section && <><span>·</span><span>{question.section}</span></>}
+                  </div>
+                  <h3 className="mt-2 text-sm font-black leading-6">
+                    {localizedQuestionText(question.question, locale)}
+                  </h3>
+                  <div className="mt-3 grid gap-2">
+                    {question.options.map((option, optionIndex) => {
+                      const isSelected = selected === optionIndex;
+                      const isCorrectOption = revealed && optionIndex === question.answer_index;
+                      const optionClass = isCorrectOption
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                        : isSelected
+                          ? "border-red-300 bg-red-50 text-red-800"
+                          : "border-stone-200 bg-white text-stone-700 hover:border-violet-300";
+                      return (
+                        <button
+                          key={optionIndex}
+                          type="button"
+                          aria-pressed={isSelected}
+                          onClick={() => setAnswers((current) => ({ ...current, [question.id]: optionIndex }))}
+                          className={`rounded-xl border px-3 py-3 text-left text-sm font-bold transition ${optionClass}`}
+                        >
+                          {String.fromCharCode(65 + optionIndex)}. {localizedQuestionText(option, locale)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {revealed && (
+                    <div className={`mt-3 rounded-xl p-3 text-sm font-bold ${correct ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
+                      <p>{correct ? l("정답입니다.", "Chính xác.", "Correct.") : l("다시 확인해 보세요.", "Hãy xem lại đáp án.", "Review the answer.")}</p>
+                      <p className="mt-1 font-medium leading-6">{localizedQuestionText(question.explanation, locale)}</p>
+                      {(question.source_page || question.source_excerpt) && (
+                        <p className="mt-2 text-xs font-medium opacity-75">
+                          {question.source_page ? `${l("페이지", "Trang", "Page")} ${question.source_page}: ` : ""}
+                          {question.source_excerpt}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </details>
+      )}
+
+      {canManage && (
+        <button
+          type="button"
+          disabled={busy || active}
+          onClick={onGenerate}
+          className="mt-4 rounded-full bg-violet-600 px-4 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {active ? l("AI 처리 중…", "AI đang xử lý…", "AI is working…") : generateLabel}
+        </button>
+      )}
+    </section>
   );
 }
 

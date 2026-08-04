@@ -32,6 +32,56 @@ export type PaperComment = {
   author_name: string;
 };
 
+export type PaperQuestionJobStatus =
+  | "queued"
+  | "processing"
+  | "completed"
+  | "failed";
+
+export type LocalizedQuestionText = {
+  ko: string;
+  vi: string;
+  en: string;
+};
+
+export type PaperQuestion = {
+  id: string;
+  difficulty: "easy" | "medium" | "hard";
+  section: string;
+  question: LocalizedQuestionText;
+  options: LocalizedQuestionText[];
+  answer_index: number;
+  explanation: LocalizedQuestionText;
+  source_page: number | null;
+  source_excerpt: string;
+};
+
+export type PaperQuestionPayload = {
+  summary: LocalizedQuestionText;
+  questions: PaperQuestion[];
+};
+
+export type PaperQuestionJob = {
+  id: string;
+  paper_id: string;
+  requested_by: string;
+  status: PaperQuestionJobStatus;
+  attempt_count: number;
+  model: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+};
+
+export type PaperQuestionSet = {
+  paper_id: string;
+  generated_by_job_id: string | null;
+  model: string;
+  payload: PaperQuestionPayload;
+  created_at: string;
+  updated_at: string;
+};
+
 export type PaperDraft = {
   title: string;
   authors: string;
@@ -139,6 +189,20 @@ export function paperReadingSummary(
   return { papers: papers.length, readers, completed, average };
 }
 
+export function localizedQuestionText(
+  value: LocalizedQuestionText,
+  locale: "ko" | "vi" | "en",
+) {
+  return value[locale]?.trim() || value.en.trim() || value.vi.trim() || value.ko.trim();
+}
+
+export function latestQuestionJob(
+  jobs: PaperQuestionJob[],
+  paperId: string,
+) {
+  return jobs.find((job) => job.paper_id === paperId);
+}
+
 export async function loadPapers(labId: string) {
   const supabase = createClient();
   const result = await supabase
@@ -158,10 +222,12 @@ export async function loadPaperClub(labId: string) {
       papers,
       progress: [] as PaperProgress[],
       comments: [] as PaperComment[],
+      questionJobs: [] as PaperQuestionJob[],
+      questionSets: [] as PaperQuestionSet[],
     };
   }
   const paperIds = papers.map((paper) => paper.id);
-  const [progressResult, commentsResult] = await Promise.all([
+  const [progressResult, commentsResult, jobsResult, setsResult] = await Promise.all([
     supabase
       .from("paper_progress")
       .select("paper_id,user_id,status,progress_percent,updated_at")
@@ -171,9 +237,20 @@ export async function loadPaperClub(labId: string) {
       .select("id,paper_id,user_id,body,created_at")
       .in("paper_id", paperIds)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("paper_question_jobs")
+      .select("id,paper_id,requested_by,status,attempt_count,model,created_at,started_at,completed_at")
+      .in("paper_id", paperIds)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("paper_question_sets")
+      .select("paper_id,generated_by_job_id,model,payload,created_at,updated_at")
+      .in("paper_id", paperIds),
   ]);
   if (progressResult.error) throw progressResult.error;
   if (commentsResult.error) throw commentsResult.error;
+  if (jobsResult.error) throw jobsResult.error;
+  if (setsResult.error) throw setsResult.error;
 
   const rawComments = (commentsResult.data ?? []) as Omit<
     PaperComment,
@@ -200,6 +277,8 @@ export async function loadPaperClub(labId: string) {
       ...comment,
       author_name: names.get(comment.user_id) ?? "Member",
     })),
+    questionJobs: (jobsResult.data ?? []) as PaperQuestionJob[],
+    questionSets: (setsResult.data ?? []) as PaperQuestionSet[],
   };
 }
 
@@ -295,5 +374,20 @@ export async function deletePaperComment(commentId: string) {
     .from("paper_comments")
     .delete()
     .eq("id", commentId);
+  if (result.error) throw result.error;
+}
+
+export async function requestPaperQuestionSet(
+  paperId: string,
+  userId: string,
+) {
+  const supabase = createClient();
+  const result = await supabase.from("paper_question_jobs").insert({
+    paper_id: paperId,
+    requested_by: userId,
+  });
+  if (result.error?.code === "23505") {
+    throw new Error("Question generation is already queued for this paper.");
+  }
   if (result.error) throw result.error;
 }
