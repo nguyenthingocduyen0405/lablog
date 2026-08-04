@@ -6,8 +6,6 @@ import type { LabRole } from "./lab-tenancy";
 export type LabAdminMember = {
   userId: string;
   name: string;
-  profileRole: string;
-  status: string;
   membershipRole: LabRole;
   seatIndex: number | null;
   joinedAt: string;
@@ -93,7 +91,7 @@ export async function loadLabAdminMembers(
 
   const { data: profiles, error: profileError } = await supabase
     .from("profiles")
-    .select("id,name,role,status")
+    .select("id,name")
     .in("id", userIds);
   if (profileError) throw profileError;
   const profilesById = new Map<string, Record<string, unknown>>(
@@ -109,8 +107,6 @@ export async function loadLabAdminMembers(
     return {
       userId,
       name: String(profile?.name ?? "Lab member"),
-      profileRole: String(profile?.role ?? ""),
-      status: String(profile?.status ?? ""),
       membershipRole: String(membership.membership_role) as LabRole,
       seatIndex:
         typeof membership.seat_index === "number"

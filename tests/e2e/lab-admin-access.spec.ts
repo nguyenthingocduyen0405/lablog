@@ -33,6 +33,16 @@ test("platform admins and lab owners can appoint a Lab Admin", () => {
   expect(roleMigration).toContain("target_role not in ('admin', 'member')");
 });
 
+test("member rows show the selected lab instead of the global profile affiliation", () => {
+  const adminPage = source("app/labs/[slug]/admin/page.tsx");
+  const adminData = source("app/lib/admin.ts");
+
+  expect(adminPage).toContain("{lab.name}</p>");
+  expect(adminPage).not.toContain("member.profileRole");
+  expect(adminData).toContain('.select("id,name")');
+  expect(adminData).not.toContain("profileRole:");
+});
+
 test("Lab Admins can update the assigned lab map and design Quests", () => {
   const settingsPage = source("app/labs/[slug]/settings/page.tsx");
   const questPage = source("app/labs/[slug]/quests/page.tsx");

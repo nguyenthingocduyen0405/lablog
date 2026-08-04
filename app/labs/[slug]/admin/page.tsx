@@ -162,7 +162,7 @@ export default function LabAdminPage() {
                 return (
                   <article key={member.userId} className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center">
                     <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-stone-100 font-black">{Array.from(member.name).slice(0, 1).join("").toUpperCase()}</div>
-                    <div className="min-w-0 flex-1"><h3 className="truncate font-black">{member.name}</h3><p className="truncate text-sm font-medium text-stone-400">{member.profileRole || member.status || "Lab member"}</p></div>
+                    <div className="min-w-0 flex-1"><h3 className="truncate font-black">{member.name}</h3><p className="truncate text-sm font-medium text-stone-400">{lab.name}</p></div>
                     {canAssignRoles && !isOwner ? (
                       <select aria-label={`Role for ${member.name}`} disabled={busyUserId === member.userId} value={member.membershipRole} onChange={(event) => void changeRole(member, event.target.value as "admin" | "member")} className="rounded-xl bg-stone-100 px-3 py-2 text-sm font-black"><option value="member">{l("멤버", "Thành viên", "Member")}</option><option value="admin">{l("Lab 관리자", "Quản trị viên Lab", "Lab admin")}</option></select>
                     ) : <span className="rounded-full bg-stone-100 px-3 py-2 text-xs font-black uppercase">{member.membershipRole}</span>}
