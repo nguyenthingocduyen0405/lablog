@@ -68,8 +68,24 @@ const paperAiPrivacyMigration = readFileSync(
   "utf8",
 );
 
+const paperAiHeartbeatMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260818000000_paper_ai_job_heartbeat.sql",
+  ),
+  "utf8",
+);
+
 const paperAiWorker = readFileSync(
   resolve(process.cwd(), "workers/paper-question-worker/worker.py"),
+  "utf8",
+);
+
+const ollamaServiceLimits = readFileSync(
+  resolve(
+    process.cwd(),
+    "workers/paper-question-worker/ollama-lablog.conf",
+  ),
   "utf8",
 );
 
@@ -128,14 +144,48 @@ test("Paper AI migration protects jobs and exposes worker-only atomic RPCs", () 
   expect(paperAiMigration).toContain("to service_role");
 });
 
-test("JCloud worker uses PDF file input and validates structured multilingual questions", () => {
-  expect(paperAiWorker).toContain("client.responses.parse");
-  expect(paperAiWorker).toContain('"type": "input_file"');
-  expect(paperAiWorker).toContain("text_format=PaperQuestionSet");
-  expect(paperAiWorker).toContain("store=False");
+test("JCloud worker runs a local structured multilingual model", () => {
+  expect(paperAiWorker).toContain("/api/generate");
+  expect(paperAiWorker).toContain("PaperQuestionBatchWithSummary");
+  expect(paperAiWorker).toContain("schema_model.model_json_schema");
+  expect(paperAiWorker).toContain("schema_model.model_validate_json");
+  expect(paperAiWorker).toContain("batch_number == 1");
+  expect(paperAiWorker).toContain("first_batch.questions + second_batch.questions");
+  expect(paperAiWorker).toContain('body.get("done_reason") == "length"');
+  expect(paperAiWorker).toContain('"5m"');
+  expect(paperAiWorker).toContain("ollama.unload(model)");
+  expect(paperAiWorker).toContain("process.kill()");
+  expect(paperAiWorker).toContain("PdfReader");
+  expect(paperAiWorker).toContain('"think": False');
+  expect(paperAiWorker).toContain("OLLAMA_URL must point to the local loopback");
+  expect(paperAiWorker).toContain("NoRedirectHandler");
+  expect(paperAiWorker).toContain("Paper PDF redirected outside the allowed host");
+  expect(paperAiWorker).toContain("resource.RLIMIT_AS");
+  expect(paperAiWorker).toContain("PAPER_MAX_PAGES");
+  expect(paperAiWorker).toContain("paper_token_budget");
+  expect(paperAiWorker).toContain("OLLAMA_NUM_PREDICT");
+  expect(paperAiWorker).toContain("Emit compact JSON without indentation");
+  expect(paperAiWorker).not.toContain("OPENAI_API_KEY");
+  expect(paperAiWorker).not.toContain("client.responses");
   expect(paperAiWorker).toContain("difficulty_counts");
   expect(paperAiWorker).toContain("complete_paper_question_job");
   expect(paperAiWorker).toContain("fail_paper_question_job");
+  expect(ollamaServiceLimits).toContain('OLLAMA_NUM_PARALLEL=1');
+  expect(ollamaServiceLimits).toContain('OLLAMA_MAX_LOADED_MODELS=1');
+  expect(ollamaServiceLimits).toContain('OLLAMA_KEEP_ALIVE=0');
+  expect(ollamaServiceLimits).toContain("MemoryMax=5500M");
+});
+
+test("Paper AI worker heartbeats long local generations", () => {
+  expect(paperAiHeartbeatMigration).toContain(
+    "public.heartbeat_paper_question_job",
+  );
+  expect(paperAiHeartbeatMigration).toContain(
+    "stale.updated_at < now() - interval '45 minutes'",
+  );
+  expect(paperAiHeartbeatMigration).toContain("to service_role");
+  expect(paperAiWorker).toContain('"heartbeat_paper_question_job"');
+  expect(paperAiWorker).toContain("heartbeat()");
 });
 
 test("Paper AI queue releases stale jobs after the final attempt", () => {

@@ -1,7 +1,8 @@
 [Unit]
 Description=LabLog paper question AI worker
-After=network-online.target
+After=network-online.target ollama.service
 Wants=network-online.target
+Requires=ollama.service
 
 [Service]
 Type=simple
@@ -20,6 +21,9 @@ PrivateDevices=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
+MemoryMax=1G
+MemorySwapMax=0
+TasksMax=8
 
 [Install]
 WantedBy=multi-user.target
