@@ -4,10 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getCurrentUser, type AuthUser } from "../../lib/auth";
-import {
-  resolvePortalFeatureHref,
-  resolvePortalQuestHref,
-} from "../../lib/feature-routing";
+import { resolvePortalFeatureHref } from "../../lib/feature-routing";
 import { labInitials, normalizeLabAccent } from "../../lib/lab-branding";
 import { useLab } from "../../lib/lab-tenancy";
 import { useI18n } from "../../lib/i18n";
@@ -74,25 +71,9 @@ export default function LabPortalPage() {
   const visibleRole = previewLabRole(lab.membershipRole);
   const canManage = visibleRole === "owner" || visibleRole === "admin";
   const accessUser = accessState.user;
-  const onboardingCompleted = Boolean(accessUser.onboardingCompletedAt);
-  const labTourCompleted = Boolean(accessUser.labTourCompletedAt);
   const chapterTwoCompleted = Boolean(accessUser.chapterTwoCompletedAt);
   const chapterThreeCompleted = Boolean(accessUser.chapterThreeCompletedAt);
   const portalLinks = [
-    {
-      href: resolvePortalQuestHref(
-        accessUser.id,
-        onboardingCompleted,
-        labTourCompleted,
-        lab.slug,
-      ),
-      icon: onboardingCompleted ? "🏠" : "🎮",
-      label: onboardingCompleted
-        ? l("메인", "Trang chính", "Main")
-        : labTourCompleted
-          ? "LabQuest"
-          : "Lab Tour",
-    },
     { href: "/labs/" + lab.slug + "/papers", icon: "📚", label: "Paper Club" },
     { href: resolvePortalFeatureHref("feed", chapterTwoCompleted, chapterThreeCompleted, lab.slug), icon: "📣", label: l("피드", "Bảng tin", "Feed") },
     { href: resolvePortalFeatureHref("mission", chapterTwoCompleted, chapterThreeCompleted, lab.slug), icon: "🎯", label: l("미션", "Nhiệm vụ", "Missions") },

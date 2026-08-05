@@ -21,8 +21,9 @@ test("unlocked ML Lab opens the member home instead of the game", () => {
     resolve(process.cwd(), "app/labs/[slug]/page.tsx"),
     "utf8",
   );
-  expect(portal).toContain("resolvePortalQuestHref(");
-  expect(portal).toContain("lab.slug,");
+  expect(portal).not.toContain("resolvePortalQuestHref(");
+  expect(portal).not.toContain('"Lab Tour"');
+  expect(portal).not.toContain("PROGRESSION");
 });
 
 test("ML Lab owners can open Feed before completing Chapter 2", () => {

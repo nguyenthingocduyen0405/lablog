@@ -267,13 +267,14 @@ test("member header keeps navigation centered and clear of global controls", () 
   );
 });
 
-test("every lab portal hides the secondary Lab Tour and progression sections", () => {
+test("every lab portal omits Lab Tour and progression from rendered links", () => {
   const portal = readFileSync(
     resolve(process.cwd(), "app/labs/[slug]/page.tsx"),
     "utf8",
   );
-  expect(portal).toContain("resolvePortalQuestHref(");
-  expect(portal).toContain(': "Lab Tour"');
+  expect(portal).not.toContain("resolvePortalQuestHref(");
+  expect(portal).not.toContain('"Lab Tour"');
+  expect(portal).toContain("{portalLinks.map((item) => (");
   expect(portal).not.toContain("showTourAndProgression");
   expect(portal).not.toContain("href: labTourHref(lab.slug)");
   expect(portal).not.toContain("FEATURE_UNLOCK_STAGES");
