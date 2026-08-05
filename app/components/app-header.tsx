@@ -1,18 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { logoutAccount, type AuthUser } from "../lib/auth";
+import { type AuthUser } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
 import CharacterAvatar from "./character-avatar";
 import FloatingNav from "./floating-nav";
 import LabMapDialog from "./lab-map-dialog";
-import LanguageSwitcher from "./language-switcher";
 import NotificationsBell from "./notifications-bell";
 
 export default function AppHeader({ user }: { user: AuthUser }) {
-  const router = useRouter();
   const { t } = useI18n();
   const [isMapOpen, setIsMapOpen] = useState(false);
 
@@ -29,7 +26,6 @@ export default function AppHeader({ user }: { user: AuthUser }) {
             </span>
           </Link>
           <div className="flex items-center gap-2">
-            <LanguageSwitcher compact />
             <button
               type="button"
               onClick={() => setIsMapOpen(true)}
@@ -52,16 +48,6 @@ export default function AppHeader({ user }: { user: AuthUser }) {
                 size={40}
               />
             </Link>
-            <button
-              type="button"
-              onClick={async () => {
-                await logoutAccount();
-                router.replace("/login");
-              }}
-              className="hidden rounded-full px-3 py-2 text-xs font-bold text-stone-400 hover:bg-white hover:text-stone-900 lg:block"
-            >
-              {t("logout")}
-            </button>
           </div>
         </div>
       </header>

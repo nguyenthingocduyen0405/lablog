@@ -198,6 +198,7 @@ export default function PaperClubPage() {
   if (isLoading || !lab) return <Loading />;
   const visibleRole = previewLabRole(lab.membershipRole);
   const canManage = visibleRole === "owner" || visibleRole === "admin";
+  const canContribute = Boolean(viewerId);
   const summary = paperReadingSummary(papers, progress);
   const selectedPaper = papers.find((paper) => paper.id === selectedPaperId);
   const selectedComments = comments.filter((comment) => comment.paper_id === selectedPaperId);
@@ -216,7 +217,7 @@ export default function PaperClubPage() {
             <p className="mt-3 max-w-2xl font-medium leading-7 text-stone-500">{l("읽기 진도를 공유하고 논문별로 토론하세요.", "Theo dõi tiến độ đọc và thảo luận theo từng paper.", "Track reading progress and discuss each paper with your lab.")}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            {canManage && <button type="button" onClick={() => setShowCreate((value) => !value)} className="rounded-full bg-[#ffd84d] px-5 py-3 text-sm font-black">+ {l("페이퍼 추가", "Thêm paper", "Add paper")}</button>}
+            {canContribute && <button type="button" onClick={() => setShowCreate((value) => !value)} className="rounded-full bg-[#ffd84d] px-5 py-3 text-sm font-black">+ {l("페이퍼 추가", "Thêm paper", "Add paper")}</button>}
             {canManage && <Link href={"/labs/" + lab.slug + "/quests"} className="rounded-full bg-violet-600 px-5 py-3 text-sm font-black text-white">{l("퀘스트 연결", "Liên kết Quest", "Connect Quest")}</Link>}
             <Link href={"/labs/" + lab.slug} className="rounded-full bg-white px-5 py-3 text-sm font-black shadow-sm">{l("랩 포털", "Portal Lab", "Lab portal")}</Link>
           </div>
@@ -231,7 +232,7 @@ export default function PaperClubPage() {
           <SummaryCard value={summary.average + "%"} label={l("평균 진도", "Tiến độ TB", "Average progress")} />
         </section>
 
-        {showCreate && canManage && (
+        {showCreate && canContribute && (
           <PaperForm draft={paperDraft} setDraft={setPaperDraft} file={paperFile} setFile={setPaperFile} issue={issue} busy={busy} l={l} onSubmit={submitPaper} />
         )}
 
@@ -278,7 +279,7 @@ export default function PaperClubPage() {
                   <PaperQuestionCard
                     key={`quiz-${paper.id}-${questionSet?.generated_by_job_id ?? questionSet?.updated_at ?? "pending"}`}
                     busy={busy}
-                    canManage={canManage}
+                    canGenerate={canContribute}
                     job={questionJob}
                     locale={locale}
                     quizScore={quizScore}
@@ -379,9 +380,9 @@ function createQuizLayout(
   };
 }
 
-function PaperQuestionCard({ busy, canManage, job, locale, quizScore, questionSet, l, onGenerate, onSubmit }: {
+function PaperQuestionCard({ busy, canGenerate, job, locale, quizScore, questionSet, l, onGenerate, onSubmit }: {
   busy: boolean;
-  canManage: boolean;
+  canGenerate: boolean;
   job: PaperQuestionJob | undefined;
   locale: "ko" | "vi" | "en";
   quizScore: PaperQuizScore | undefined;
@@ -631,7 +632,7 @@ function PaperQuestionCard({ busy, canManage, job, locale, quizScore, questionSe
         </details>
       )}
 
-      {canManage && (
+      {canGenerate && (
         <button
           type="button"
           disabled={busy || active}

@@ -9,7 +9,6 @@ import {
   completeChapterTwo,
   completeOnboarding,
   getCurrentUser,
-  logoutAccount,
 } from "../lib/auth";
 import { useLab } from "../lib/lab-tenancy";
 import { useI18n } from "../lib/i18n";
@@ -362,7 +361,6 @@ export default function GenericLabQuest() {
               <h1 className="mt-3 text-5xl font-black tracking-[-.06em] sm:text-7xl">LAB<span className="text-[#39ffb6]">QUEST</span></h1>
               <p className="mt-3 max-w-xl font-semibold leading-7 text-white/50">{l("미션을 완료하고 랩의 다음 단계를 열어 보세요.", "Hoàn thành nhiệm vụ và mở khóa bước tiếp theo của Lab.", "Complete missions and unlock the lab's next stage.")}</p>
             </div>
-            <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="self-start rounded-full border border-white/10 bg-white/[.06] px-5 py-3 text-sm font-black text-white/70 transition hover:border-cyan-200/30 hover:text-white lg:self-auto">{l("로그아웃", "Đăng xuất", "Log out")}</button>
           </div>
           <div className="mt-7 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">

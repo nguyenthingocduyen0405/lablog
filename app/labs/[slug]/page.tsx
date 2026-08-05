@@ -4,13 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getCurrentUser, type AuthUser } from "../../lib/auth";
-import { FEATURE_UNLOCK_STAGES } from "../../lib/feature-access";
 import {
   resolvePortalFeatureHref,
   resolvePortalQuestHref,
 } from "../../lib/feature-routing";
 import { labInitials, normalizeLabAccent } from "../../lib/lab-branding";
-import { labTourHref } from "../../lib/lab-routing";
 import { useLab } from "../../lib/lab-tenancy";
 import { useI18n } from "../../lib/i18n";
 import { useRolePreview } from "../../lib/role-preview";
@@ -95,15 +93,6 @@ export default function LabPortalPage() {
           ? "LabQuest"
           : "Lab Tour",
     },
-    ...(labTourCompleted
-      ? [
-          {
-            href: labTourHref(lab.slug),
-            icon: "🗺️",
-            label: "Lab Tour",
-          },
-        ]
-      : []),
     { href: "/labs/" + lab.slug + "/papers", icon: "📚", label: "Paper Club" },
     { href: resolvePortalFeatureHref("feed", chapterTwoCompleted, chapterThreeCompleted, lab.slug), icon: "📣", label: l("피드", "Bảng tin", "Feed") },
     { href: resolvePortalFeatureHref("mission", chapterTwoCompleted, chapterThreeCompleted, lab.slug), icon: "🎯", label: l("미션", "Nhiệm vụ", "Missions") },
@@ -114,11 +103,11 @@ export default function LabPortalPage() {
   return (
     <main className="min-h-screen bg-[#f5f3ee] px-5 py-8 text-stone-950 sm:px-8 sm:py-12">
       <div className="mx-auto max-w-6xl">
-        <nav className="flex items-center justify-between gap-4">
+        <nav className="flex flex-wrap items-center justify-between gap-4 lg:flex-nowrap">
           <Link href="/labs" className="text-sm font-black text-stone-500">
             ← {l("랩 목록", "Danh sách lab", "All labs")}
           </Link>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             {canManage && (
               <Link href={"/labs/" + lab.slug + "/admin"} className="rounded-full bg-[#ffd84d] px-4 py-2 text-sm font-black text-stone-950 shadow-sm">
                 {l("랩 관리", "Quản trị Lab", "Lab admin")}
@@ -173,18 +162,6 @@ export default function LabPortalPage() {
           ))}
         </section>
 
-        <section className="mt-7 rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[.2em]" style={{ color: accent }}>PROGRESSION</p>
-          <h2 className="mt-2 text-2xl font-black">{l("게임으로 기능 열기", "Mở tính năng bằng game", "Unlock features through the game")}</h2>
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
-            {FEATURE_UNLOCK_STAGES.map((stage) => (
-              <article key={stage.id} className="rounded-2xl bg-stone-100 p-4">
-                <p className="text-xs font-black uppercase tracking-wider text-stone-400">{stage.label}</p>
-                <p className="mt-2 text-sm font-black">{stage.features.join(" · ")}</p>
-              </article>
-            ))}
-          </div>
-        </section>
       </div>
     </main>
   );

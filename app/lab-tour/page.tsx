@@ -14,9 +14,9 @@ import {
 } from "../lib/lab-social";
 import { useI18n } from "../lib/i18n";
 import {
-  labQuestHref,
   labTourHref,
   resolveLabDeepLink,
+  resolveLabTourCompletionHref,
 } from "../lib/lab-routing";
 import { useLab } from "../lib/lab-tenancy";
 
@@ -147,7 +147,7 @@ function RoutedLabTour() {
   ) {
     return <TourLoading />;
   }
-  return <LabTourExperience />;
+  return <LabTourExperience key={decision.lab.id} />;
 }
 
 function TourLoading() {
@@ -172,6 +172,7 @@ function LabTourExperience() {
   const [selectedSeat, setSelectedSeat] = useState<number | null>(null);
   const [isSavingSeat, setIsSavingSeat] = useState(false);
   const [seatMessage, setSeatMessage] = useState("");
+  const tourMapWidth = `clamp(10rem, calc(${activeLab.mapAspectRatio * 100}dvh - ${activeLab.mapAspectRatio * 19}rem), 100%)`;
 
   useEffect(() => {
     let cancelled = false;
@@ -330,7 +331,13 @@ function LabTourExperience() {
     setIsFinishing(true);
     try {
       await completeLabTour(user.id);
-      router.push(labQuestHref(activeLab.slug));
+      router.replace(
+        resolveLabTourCompletionHref(
+          user.id,
+          Boolean(user.onboardingCompletedAt),
+          activeLab.slug,
+        ),
+      );
     } finally {
       setIsFinishing(false);
     }
@@ -344,9 +351,9 @@ function LabTourExperience() {
     );
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#10120e] text-white">
+    <main className="relative flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#10120e] text-white">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,216,77,.16),transparent_45%)]" />
-      <header className="relative z-40 flex items-center justify-between px-5 py-4 sm:px-8">
+      <header className="relative z-40 flex shrink-0 items-center justify-between px-5 py-4 sm:px-8">
         <div>
           <p className="text-xs font-black tracking-[0.24em] text-[#ffd84d]">
             {activeLab.name}
@@ -369,12 +376,12 @@ function LabTourExperience() {
         </button>
       </header>
 
-      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-72px)] max-w-7xl items-center justify-center px-3 pb-32 sm:px-8 sm:pb-28">
+      <section className="relative z-10 mx-auto flex min-h-0 w-full max-w-7xl flex-1 items-center justify-center px-3 pb-32 sm:px-8 sm:pb-28">
         <div
           className="relative w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#d9dcd8] shadow-[0_35px_120px_rgba(0,0,0,.55)]"
           style={{
             aspectRatio: activeLab.mapAspectRatio,
-            width: `min(100%, calc((100vh - 13rem) * ${activeLab.mapAspectRatio}))`,
+            width: tourMapWidth,
           }}
         >
           <div
@@ -477,8 +484,12 @@ function LabTourExperience() {
         </div>
       </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-6 sm:pb-6">
+      <div className="absolute inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-6 sm:pb-6">
         <div className="mx-auto max-w-3xl rounded-[1.6rem] bg-[#f5f3ee] p-4 text-stone-950 shadow-[0_20px_70px_rgba(0,0,0,.45)] sm:p-5">
+          <div
+            data-tour-stage={stage}
+            className="grid min-h-[13rem] items-center sm:min-h-[9.5rem]"
+          >
           {stage === "overview" && (
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -663,6 +674,7 @@ function LabTourExperience() {
               </button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </main>

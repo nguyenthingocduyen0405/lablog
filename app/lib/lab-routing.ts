@@ -9,6 +9,16 @@ export function labTourHref(labSlug: string) {
   return "/lab-tour?" + new URLSearchParams({ lab: labSlug }).toString();
 }
 
+export function resolveLabTourCompletionHref(
+  userId: string,
+  onboardingCompleted: boolean,
+  labSlug: string,
+) {
+  return onboardingCompleted
+    ? `/members/${userId}`
+    : labQuestHref(labSlug);
+}
+
 export function labQuestHref(
   labSlug: string,
   options: LabQuestHrefOptions = {},

@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getCurrentUser, logoutAccount, type AuthUser } from "./lib/auth";
+import { getCurrentUser, type AuthUser } from "./lib/auth";
 import CharacterAvatar from "./components/character-avatar";
-import LanguageSwitcher from "./components/language-switcher";
 import { useI18n } from "./lib/i18n";
 import { labQuestHref, labTourHref } from "./lib/lab-routing";
 import { useLab } from "./lib/lab-tenancy";
@@ -91,10 +90,8 @@ export default function ReadyPage() {
       <header className="relative z-10 flex items-center justify-between px-6 py-6 sm:px-10">
         <p className="text-xs font-black uppercase tracking-[0.24em] text-stone-400">OS LAB</p>
         <div className="flex items-center gap-3">
-          <LanguageSwitcher compact />
           <span className="hidden text-sm font-bold text-stone-400 sm:block">{user.name}</span>
           <Link href={`/members/${user.id}`} className="rounded-[.85rem] ring-2 ring-white shadow-sm"><CharacterAvatar config={user.avatarConfig} background={user.avatarBackground} name={user.name} size={40} /></Link>
-          <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="text-xs font-bold text-stone-400 hover:text-stone-950">{t("logout")}</button>
         </div>
       </header>
 

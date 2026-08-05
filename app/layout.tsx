@@ -4,6 +4,7 @@ import { LanguageProvider } from "./lib/i18n";
 import { LabProvider } from "./lib/lab-tenancy";
 import { RolePreviewProvider } from "./lib/role-preview";
 import RolePreviewToolbar from "./components/role-preview-toolbar";
+import GlobalHeaderControls from "./components/global-header-controls";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -33,7 +34,10 @@ export default function RootLayout({
           <LabProvider>
             <RolePreviewProvider>
               <RolePreviewToolbar />
-              {children}
+              <div className="relative min-h-screen pt-24 [&>*:first-child]:-mt-24 [&>*:first-child]:pt-24">
+                {children}
+                <GlobalHeaderControls />
+              </div>
             </RolePreviewProvider>
           </LabProvider>
         </LanguageProvider>

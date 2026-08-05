@@ -184,7 +184,7 @@ function PortalSettingsForm({ lab }: { lab: Lab }) {
   return (
     <main className="min-h-screen bg-[#f5f3ee] px-5 py-10 text-stone-950 sm:px-8">
       <div className="mx-auto max-w-5xl">
-        <header className="flex items-end justify-between gap-4">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[.2em] text-stone-400">
               {lab.name} · PORTAL

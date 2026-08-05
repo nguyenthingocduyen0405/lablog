@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { getCurrentUser, loginAccount } from "../lib/auth";
-import LanguageSwitcher from "../components/language-switcher";
 import { useI18n } from "../lib/i18n";
 import { getAccountLandingPath } from "../lib/lab-tenancy";
 
@@ -44,9 +43,6 @@ export default function LoginPage() {
 
   return (
     <main className="relative grid min-h-screen bg-[#f5f3ee] text-stone-950 lg:grid-cols-2">
-      <div className="absolute right-5 top-5 z-20">
-        <LanguageSwitcher compact />
-      </div>
       <section className="relative hidden overflow-hidden bg-[#181611] p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="absolute -right-24 top-20 h-80 w-80 rounded-full bg-[#ffd84d]/20 blur-3xl" />
         <div className="relative flex items-center gap-3">

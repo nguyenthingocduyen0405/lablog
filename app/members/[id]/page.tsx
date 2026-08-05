@@ -7,9 +7,8 @@ import AvatarDesigner from "../../components/avatar-designer";
 import CharacterAvatar from "../../components/character-avatar";
 import DailyPostCard from "../../components/daily-post-card";
 import FloatingNav from "../../components/floating-nav";
-import LanguageSwitcher from "../../components/language-switcher";
 import NotificationsBell from "../../components/notifications-bell";
-import { getCurrentUser, logoutAccount, type AuthUser } from "../../lib/auth";
+import { getCurrentUser, type AuthUser } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
 import { labQuestHref, labTourHref } from "../../lib/lab-routing";
 import { useLab } from "../../lib/lab-tenancy";
@@ -140,35 +139,24 @@ export default function MemberProfilePage() {
   return (
     <main className="min-h-screen bg-[#f5f3ee] pb-24 text-stone-950 md:pb-0">
       <header className="relative z-[60] border-b border-black/[0.06] bg-[#f5f3ee]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-8">
+        <div className="mx-auto grid max-w-5xl grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 py-4 sm:px-8">
           <Link
             href={
               currentUser.chapterTwoCompletedAt
                 ? "/update#feed"
                 : labQuestHref(activeLab.slug, { chapter: 2, locked: "feed" })
             }
-            className="flex items-center gap-2 text-sm font-black transition hover:-translate-x-1"
+            className="min-w-0 truncate text-sm font-black transition hover:-translate-x-1"
           >
             {currentUser.chapterTwoCompletedAt
               ? l("← 랩 피드", "← Bảng tin Lab", "← Lab feed")
               : l("🔒 랩 피드", "🔒 Bảng tin Lab", "🔒 Lab feed")}
           </Link>
-          <Link href="/" className="text-lg font-black tracking-[-0.04em]">
+          <Link href="/" className="shrink-0 text-lg font-black tracking-[-0.04em]">
             LABLOG
           </Link>
-          <div className="flex items-center gap-2">
-            <LanguageSwitcher compact />
+          <div className="flex shrink-0 items-center justify-self-end">
             <NotificationsBell userId={currentUser.id} />
-            <button
-              type="button"
-              onClick={async () => {
-                await logoutAccount();
-                router.replace("/login");
-              }}
-              className="hidden text-right text-xs font-bold text-stone-400 hover:text-stone-900 sm:block"
-            >
-              {l("로그아웃", "Đăng xuất", "Log out")}
-            </button>
           </div>
         </div>
       </header>

@@ -5,6 +5,7 @@ import {
   labQuestHref,
   labTourHref,
   resolveLabDeepLink,
+  resolveLabTourCompletionHref,
   shouldNavigateForLabSwitch,
 } from "../../app/lib/lab-routing";
 import { createLabSlug } from "../../app/lib/lab-slug";
@@ -36,6 +37,7 @@ import {
   osMissionKey,
   type OsLabQuestCatalog,
 } from "../../app/lib/os-lab-quest";
+import { resolvePortalQuestHref } from "../../app/lib/feature-routing";
 
 const osLab = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -156,11 +158,145 @@ test("every lab gets its own tenant-scoped Lab Tour URL", () => {
   expect(labTour).toContain('activeLab.slug === "os-lab" ? "game" : "complete"');
   expect(labTour).not.toContain("if (currentUser.labTourCompletedAt)");
 
+});
+
+test("Lab Tour resets per lab and fits its controls inside the viewport", () => {
+  const labTour = readFileSync(
+    resolve(process.cwd(), "app/lab-tour/page.tsx"),
+    "utf8",
+  );
+
+  expect(labTour).toContain("<LabTourExperience key={decision.lab.id} />");
+  expect(labTour).toContain(
+    "relative flex h-[100dvh] min-h-0 flex-col overflow-hidden",
+  );
+  expect(labTour).toContain("min-h-0 w-full max-w-7xl flex-1");
+  expect(labTour).toContain("const tourMapWidth =");
+  expect(labTour).toContain("clamp(10rem, calc(");
+  expect(labTour).toContain("width: tourMapWidth");
+  expect(labTour).toContain(
+    'className="absolute inset-x-0 bottom-0 z-50',
+  );
+  expect(labTour).toContain("data-tour-stage={stage}");
+  expect(labTour).toContain(
+    'className="grid min-h-[13rem] items-center sm:min-h-[9.5rem]"',
+  );
+  expect(labTour).not.toContain("calc((100vh - 13rem) *");
+  expect(labTour).not.toContain(
+    'className="fixed inset-x-0 bottom-0 z-50',
+  );
+  expect(labTour).toContain("router.replace(");
+  expect(labTour).toContain("resolveLabTourCompletionHref(");
+});
+
+test("completed onboarding skips LabQuest after Lab Tour", () => {
+  expect(resolveLabTourCompletionHref("member-1", false, "ml-lab")).toBe(
+    "/labquest?lab=ml-lab",
+  );
+  expect(resolveLabTourCompletionHref("member-1", true, "ml-lab")).toBe(
+    "/members/member-1",
+  );
+});
+
+test("language switcher and logout share one global top-right control", () => {
+  const layout = readFileSync(resolve(process.cwd(), "app/layout.tsx"), "utf8");
+  expect(layout).toContain("<GlobalHeaderControls />");
+  expect(layout).toContain(
+    "relative min-h-screen pt-24 [&>*:first-child]:-mt-24 [&>*:first-child]:pt-24",
+  );
+  expect(layout.indexOf("{children}")).toBeLessThan(
+    layout.indexOf("<GlobalHeaderControls />"),
+  );
+  const globalSwitcher = readFileSync(
+    resolve(process.cwd(), "app/components/global-header-controls.tsx"),
+    "utf8",
+  );
+  expect(globalSwitcher).toContain("absolute right-5 top-10");
+  expect(globalSwitcher).toContain("<LanguageSwitcher compact />");
+  expect(globalSwitcher).toContain('className="block w-24"');
+  expect(globalSwitcher).toContain("logoutAccount()");
+  expect(globalSwitcher).toContain("onAuthStateChange");
+
+  for (const localPage of [
+    "app/page.tsx",
+    "app/login/page.tsx",
+    "app/signup/page.tsx",
+    "app/labs/page.tsx",
+    "app/members/[id]/page.tsx",
+    "app/components/app-header.tsx",
+  ]) {
+    const source = readFileSync(resolve(process.cwd(), localPage), "utf8");
+    expect(source).not.toContain("<LanguageSwitcher");
+    expect(source).not.toContain("components/language-switcher");
+  }
+
+  for (const signedInSurface of [
+    "app/page.tsx",
+    "app/labs/page.tsx",
+    "app/labs/[slug]/page.tsx",
+    "app/labs/[slug]/admin/page.tsx",
+    "app/labs/[slug]/settings/page.tsx",
+    "app/labs/[slug]/papers/page.tsx",
+    "app/labs/[slug]/quests/page.tsx",
+    "app/members/[id]/page.tsx",
+    "app/components/app-header.tsx",
+    "app/labquest/generic-labquest.tsx",
+  ]) {
+    const source = readFileSync(resolve(process.cwd(), signedInSurface), "utf8");
+    expect(source).not.toContain("logoutAccount");
+    expect(source).not.toContain("pr-60");
+  }
+});
+
+test("member header keeps navigation centered and clear of global controls", () => {
+  const memberPage = readFileSync(
+    resolve(process.cwd(), "app/members/[id]/page.tsx"),
+    "utf8",
+  );
+
+  expect(memberPage).toContain(
+    "grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 py-4 sm:px-8",
+  );
+  expect(memberPage).toContain("min-w-0 truncate text-sm font-black");
+  expect(memberPage).toContain("shrink-0 text-lg font-black");
+  expect(memberPage).toContain("shrink-0 items-center justify-self-end");
+  expect(memberPage).not.toContain("pt-24");
+  expect(memberPage).not.toContain("pr-60");
+  expect(memberPage).not.toContain(
+    "flex max-w-5xl items-center justify-between px-5 py-4",
+  );
+});
+
+test("every lab portal hides the secondary Lab Tour and progression sections", () => {
   const portal = readFileSync(
     resolve(process.cwd(), "app/labs/[slug]/page.tsx"),
     "utf8",
   );
-  expect(portal).toContain("href: labTourHref(lab.slug)");
+  expect(portal).toContain("resolvePortalQuestHref(");
+  expect(portal).toContain(': "Lab Tour"');
+  expect(portal).not.toContain("showTourAndProgression");
+  expect(portal).not.toContain("href: labTourHref(lab.slug)");
+  expect(portal).not.toContain("FEATURE_UNLOCK_STAGES");
+  expect(portal).not.toContain("PROGRESSION");
+  expect(portal).not.toContain('lab.slug !== "mc-labs"');
+  expect(portal).toContain(
+    "flex flex-wrap items-center justify-between gap-4 lg:flex-nowrap",
+  );
+  expect(portal).not.toContain("pr-60");
+});
+
+test("every lab slug keeps exactly one primary onboarding route", () => {
+  for (const slug of ["os-lab", "mc-labs", "ml-lab", "cv-labs", "custom-lab"]) {
+    expect(resolvePortalQuestHref("member-1", false, false, slug)).toBe(
+      `/lab-tour?lab=${slug}`,
+    );
+    expect(resolvePortalQuestHref("member-1", false, true, slug)).toBe(
+      `/labquest?lab=${slug}`,
+    );
+    expect(resolvePortalQuestHref("member-1", true, true, slug)).toBe(
+      "/members/member-1",
+    );
+  }
 });
 
 test("Lab Tour completion is isolated in each lab membership", () => {
@@ -437,6 +573,14 @@ test("OS Lab quest catalog maps database progress without hiding completed games
     resolve(process.cwd(), "app/labquest/page.tsx"),
     "utf8",
   );
+  const chapterTwo = readFileSync(
+    resolve(process.cwd(), "app/labquest/chapter-two.tsx"),
+    "utf8",
+  );
+  const chapterThree = readFileSync(
+    resolve(process.cwd(), "app/labquest/chapter-three.tsx"),
+    "utf8",
+  );
   const questAdmin = readFileSync(
     resolve(process.cwd(), "app/lib/quest-admin.ts"),
     "utf8",
@@ -455,6 +599,11 @@ test("OS Lab quest catalog maps database progress without hiding completed games
   );
   expect(questAdmin).toContain("specializedMission");
   expect(questAdmin).toContain('existingMission?.content.renderer === "os-lab"');
+  expect(osPlayer).not.toContain("lg:pr-60");
+  expect(osPlayer).not.toContain("pb-4 pt-24");
+  expect(chapterTwo).not.toContain("lg:pr-60");
+  expect(chapterTwo).not.toContain("pb-4 pt-24");
+  expect(chapterThree).not.toContain("lg:pr-60");
 });
 
 test("lab owners can configure every feature before completing quests", () => {
@@ -546,4 +695,62 @@ test("language selection survives a reload", async ({ page }) => {
 
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByRole("heading", { name: "Welcome back 👋" })).toBeVisible();
+});
+
+test("outer pages expose language selection and persist it after reload", async ({ page }) => {
+  await page.goto("/route-without-a-local-header");
+
+  const vietnameseButton = page.getByRole("button", {
+    name: "VI",
+    exact: true,
+  });
+  await expect(vietnameseButton).toBeVisible();
+  await vietnameseButton.click();
+  await expect(vietnameseButton).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("html")).toHaveAttribute("lang", "vi");
+
+  await page.reload();
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "vi");
+  await expect(vietnameseButton).toHaveAttribute("aria-pressed", "true");
+});
+
+test("global utility bar preserves each page surface without extra scroll", async ({
+  page,
+}) => {
+  await page.goto("/signup");
+  const signupMain = page.locator("main");
+  const signupBox = await signupMain.boundingBox();
+  expect(signupBox).not.toBeNull();
+  expect(Math.round(signupBox!.y)).toBe(0);
+  await expect(signupMain).toHaveCSS("background-color", "rgb(24, 22, 17)");
+
+  await page.goto("/route-without-a-local-header");
+  const dimensions = await page.evaluate(() => ({
+    viewport: window.innerHeight,
+    document: document.documentElement.scrollHeight,
+  }));
+  expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport + 1);
+});
+
+test("language selection keeps the same top-right position across pages", async ({ page }) => {
+  await page.goto("/login");
+  const loginPosition = await page.getByRole("group").boundingBox();
+  expect(loginPosition).not.toBeNull();
+  await expect(page.getByRole("button", { name: /Log out|Đăng xuất|로그아웃/ })).toHaveCount(0);
+
+  await page.goto("/route-without-a-local-header");
+  const outerPosition = await page.getByRole("group").boundingBox();
+  expect(outerPosition).not.toBeNull();
+  const controlsPosition = await page.getByRole("group").locator("..").boundingBox();
+  const viewport = page.viewportSize();
+  expect(controlsPosition).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(controlsPosition!.x).toBeGreaterThanOrEqual(0);
+  expect(controlsPosition!.x + controlsPosition!.width).toBeLessThanOrEqual(
+    viewport!.width,
+  );
+
+  expect(Math.round(outerPosition!.x)).toBe(Math.round(loginPosition!.x));
+  expect(Math.round(outerPosition!.y)).toBe(Math.round(loginPosition!.y));
 });

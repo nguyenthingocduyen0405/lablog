@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { getCurrentUser, registerAccount } from "../lib/auth";
-import LanguageSwitcher from "../components/language-switcher";
 import { useI18n } from "../lib/i18n";
 import { getAccountLandingPath } from "../lib/lab-tenancy";
 
@@ -107,7 +106,6 @@ export default function SignupPage() {
             <span className="text-xl font-black">LABLOG</span>
           </Link>
           <div className="flex items-center gap-3">
-            <LanguageSwitcher compact dark />
             <Link href="/login" className="text-sm font-bold text-white/55">
               {t("login")}
             </Link>

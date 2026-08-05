@@ -100,6 +100,14 @@ const paperProgressCompatibilityMigration = readFileSync(
   "utf8",
 );
 
+const memberPaperContributionsMigration = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/migrations/20260823000000_member_paper_contributions.sql",
+  ),
+  "utf8",
+);
+
 const paperAiWorker = readFileSync(
   resolve(process.cwd(), "workers/paper-question-worker/worker.py"),
   "utf8",
@@ -137,7 +145,7 @@ test("Paper Club migration protects collaborative data with RLS", () => {
   );
 });
 
-test("Paper PDF storage restricts uploads to lab admins and 20 MB", () => {
+test("initial Paper PDF storage policy limits admin uploads to 20 MB", () => {
   expect(storageMigration).toContain("values ('paper-files', 'paper-files', true)");
   expect(storageMigration).toContain("public.is_lab_admin");
   expect(storageMigration).toContain("20971520");
@@ -147,6 +155,41 @@ test("Paper PDF storage restricts uploads to lab admins and 20 MB", () => {
   expect(storageMigration).toContain(
     'drop policy if exists "Paper files are publicly readable"',
   );
+});
+
+test("regular lab members can add papers and request AI quizzes", () => {
+  expect(memberPaperContributionsMigration).toContain(
+    'create policy "Lab members can create papers"',
+  );
+  expect(memberPaperContributionsMigration).toContain(
+    "created_by = (select auth.uid())",
+  );
+  expect(memberPaperContributionsMigration).toContain(
+    "public.is_lab_member(lab_id)",
+  );
+  expect(memberPaperContributionsMigration).toContain(
+    "((storage.foldername(name))[2]) = (select auth.uid())::text",
+  );
+  expect(memberPaperContributionsMigration).toContain(
+    'create policy "Lab members can request paper questions"',
+  );
+  expect(memberPaperContributionsMigration).toContain(
+    "public.is_lab_member(paper.lab_id)",
+  );
+
+  const paperClub = readFileSync(
+    resolve(process.cwd(), "app/labs/[slug]/papers/page.tsx"),
+    "utf8",
+  );
+  expect(paperClub).toContain("const canContribute = Boolean(viewerId)");
+  expect(paperClub).toContain(
+    '{canContribute && <button type="button" onClick={() => setShowCreate',
+  );
+  expect(paperClub).toContain("showCreate && canContribute");
+  expect(paperClub).toContain("canGenerate={canContribute}");
+  expect(paperClub).toContain("{canGenerate && (");
+  expect(paperClub).toContain("{canManage && <Link");
+  expect(paperClub).toContain("{canManage && <button");
 });
 
 test("Paper AI migration protects jobs and exposes worker-only atomic RPCs", () => {

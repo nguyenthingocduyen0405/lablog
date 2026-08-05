@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
-import { logoutAccount } from "../lib/auth";
 import { useLab } from "../lib/lab-tenancy";
 import { useI18n } from "../lib/i18n";
 import { createLabSlug } from "../lib/lab-slug";
@@ -18,7 +16,6 @@ export default function LabsPage() {
     previewRole,
     previewLabRole,
   } = useRolePreview();
-  const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -77,9 +74,8 @@ export default function LabsPage() {
               {l("랩 관리", "Quản lý lab", "Manage labs")}
             </h1>
           </div>
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {platformAdmin && <Link href="/admin" className="rounded-full bg-stone-950 px-5 py-3 text-sm font-black text-white">{l("플랫폼 관리", "Quản trị hệ thống", "Platform admin")}</Link>}
-            <button type="button" onClick={async () => { await logoutAccount(); router.replace("/login"); }} className="rounded-full bg-stone-950 px-5 py-3 text-sm font-black text-white">{l("로그아웃", "Đăng xuất", "Log out")}</button>
           </div>
         </div>
 
