@@ -1,0 +1,5 @@
+*** Begin Patch
+*** Update File: app/labs/[slug]/papers/page.tsx
+@@
+-  const [paperFile, setPaperFile] = useState<File | null>(null);
+*** End Patch
