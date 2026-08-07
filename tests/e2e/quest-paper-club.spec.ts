@@ -577,3 +577,30 @@ test("Paper Club route is protected for signed-out visitors", async ({ page }) =
   await page.goto("/labs/os-lab/papers");
   await expect(page).toHaveURL(/\/login$/);
 });
+
+test("Paper Club launches a replayable, persistent Paper Arena explainer", () => {
+  const paperClub = readFileSync(
+    resolve(process.cwd(), "app/labs/[slug]/papers/page.tsx"),
+    "utf8",
+  );
+  const arena = readFileSync(
+    resolve(process.cwd(), "app/components/paper-arena.tsx"),
+    "utf8",
+  );
+
+  expect(paperClub).toContain("<PaperArena");
+  expect(paperClub).toContain("lablog:paper-arena:v3:");
+  expect(paperClub).toContain("window.localStorage.setItem");
+  expect(paperClub).toContain("Replay Paper Arena");
+  expect(arena).toContain('role="dialog"');
+  expect(arena).toContain('event.key === "Escape"');
+  expect(arena).toContain("BEGINNER STORY");
+  expect(arena).toContain("PEER REVIEW");
+  expect(arena).toContain("CONFERENCE CHALLENGE");
+  expect(arena).toContain("JOURNAL CHALLENGE");
+  expect(arena).toContain("Move paper to the next gate");
+  expect(arena).toContain("routeProgress.conference < 3");
+  expect(arena).toContain("routeProgress.journal < 3");
+  expect(arena).toContain("Mark both statements O or X");
+  expect(arena).toContain("MISCONCEPTION CLEARED");
+});

@@ -7,6 +7,7 @@ import { useI18n } from "../../../lib/i18n";
 import { useLab } from "../../../lib/lab-tenancy";
 import { useRolePreview } from "../../../lib/role-preview";
 import { createClient } from "../../../lib/supabase/client";
+import PaperArena from "../../../components/paper-arena";
 import {
   createPaper,
   createPaperComment,
@@ -58,7 +59,18 @@ export default function PaperClubPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [paperArenaOpen, setPaperArenaOpen] = useState(false);
   const discussionTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const paperArenaStorageKey = `lablog:paper-arena:v3:${slug}`;
+
+  const closePaperArena = useCallback(() => {
+    try {
+      window.localStorage.setItem(paperArenaStorageKey, "seen");
+    } catch {
+      // The explainer remains replayable when browser storage is unavailable.
+    }
+    setPaperArenaOpen(false);
+  }, [paperArenaStorageKey]);
 
   const refresh = useCallback(async (silent = false) => {
     if (!lab) return;
@@ -98,6 +110,18 @@ export default function PaperClubPage() {
     const timeoutId = window.setTimeout(() => void refresh(), 0);
     return () => window.clearTimeout(timeoutId);
   }, [isLoading, lab, refresh, router]);
+
+  useEffect(() => {
+    if (isLoading || !lab) return;
+    const timeoutId = window.setTimeout(() => {
+      try {
+        setPaperArenaOpen(window.localStorage.getItem(paperArenaStorageKey) !== "seen");
+      } catch {
+        setPaperArenaOpen(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [isLoading, lab, paperArenaStorageKey]);
 
   useEffect(() => {
     if (!questionJobs.some((job) => job.status === "queued" || job.status === "processing")) {
@@ -208,7 +232,9 @@ export default function PaperClubPage() {
   }) ?? paperFileError(paperFile);
 
   return (
-    <main className="min-h-screen bg-[#f5f3ee] px-5 py-8 text-stone-950 sm:px-8 sm:py-12">
+    <>
+      <PaperArena open={paperArenaOpen} onClose={closePaperArena} />
+      <main className="min-h-screen bg-[#f5f3ee] px-5 py-8 text-stone-950 sm:px-8 sm:py-12">
       <div className="mx-auto max-w-6xl">
         <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -217,6 +243,7 @@ export default function PaperClubPage() {
             <p className="mt-3 max-w-2xl font-medium leading-7 text-stone-500">{l("읽기 진도를 공유하고 논문별로 토론하세요.", "Theo dõi tiến độ đọc và thảo luận theo từng paper.", "Track reading progress and discuss each paper with your lab.")}</p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={() => setPaperArenaOpen(true)} className="rounded-full bg-stone-950 px-5 py-3 text-sm font-black text-white">⚔ {l("Paper Arena 다시 보기", "Chơi lại Paper Arena", "Replay Paper Arena")}</button>
             {canContribute && <button type="button" onClick={() => setShowCreate((value) => !value)} className="rounded-full bg-[#ffd84d] px-5 py-3 text-sm font-black">+ {l("페이퍼 추가", "Thêm paper", "Add paper")}</button>}
             {canManage && <Link href={"/labs/" + lab.slug + "/quests"} className="rounded-full bg-violet-600 px-5 py-3 text-sm font-black text-white">{l("퀘스트 연결", "Liên kết Quest", "Connect Quest")}</Link>}
             <Link href={"/labs/" + lab.slug} className="rounded-full bg-white px-5 py-3 text-sm font-black shadow-sm">{l("랩 포털", "Portal Lab", "Lab portal")}</Link>
@@ -331,7 +358,8 @@ export default function PaperClubPage() {
           </section>
         )}
       </div>
-    </main>
+      </main>
+    </>
   );
 }
 
